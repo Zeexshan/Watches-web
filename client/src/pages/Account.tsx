@@ -84,6 +84,22 @@ export default function Account() {
     }
   };
 
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn && user?.email) {
+      setOrdersLoading(true);
+      fetch(`/api/orders?email=${user.email}`)
+        .then(res => res.json())
+        .then(data => {
+          setOrders(Array.isArray(data) ? data : []);
+        })
+        .catch(err => console.error("Error fetching orders:", err))
+        .finally(() => setOrdersLoading(false));
+    }
+  }, [isLoggedIn, user?.email]);
+
   if (isLoading) return null;
 
   if (!isLoggedIn) {
@@ -161,36 +177,120 @@ export default function Account() {
                 </div>
               </div>
               <nav className="space-y-1">
-                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5">
-                  <UserIcon className="mr-2 h-4 w-4" /> Profile
-                </Button>
-                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5 text-primary bg-white/5">
-                  <Package className="mr-2 h-4 w-4" /> Orders
-                </Button>
-                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5">
-                  <MapPin className="mr-2 h-4 w-4" /> Addresses
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10 mt-8"
-                  onClick={logout}
-                >
-                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
-                </Button>
+                <Tabs defaultValue="orders" className="w-full border-none">
+                  <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1 p-0">
+                    <TabsTrigger value="profile" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
+                      <UserIcon className="mr-2 h-4 w-4" /> Profile
+                    </TabsTrigger>
+                    <TabsTrigger value="orders" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
+                      <Package className="mr-2 h-4 w-4" /> Orders
+                    </TabsTrigger>
+                    <TabsTrigger value="addresses" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
+                      <MapPin className="mr-2 h-4 w-4" /> Addresses
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10 mt-8"
+                    onClick={logout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                  </Button>
+                </Tabs>
               </nav>
             </Card>
+            {user?.email === "zixshankhan@gmail.com" && (
+              <Button 
+                variant="outline" 
+                className="w-full border-primary/20 hover:bg-primary/10 text-primary"
+                onClick={() => setLocation("/admin")}
+              >
+                Admin Dashboard
+              </Button>
+            )}
           </aside>
 
           <div className="flex-1">
-            <h1 className="text-3xl font-serif font-bold mb-8">My Orders</h1>
-            <div className="space-y-6">
-              <div className="text-center py-12 border border-dashed border-white/10 rounded-lg">
-                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">No orders yet</h3>
-                <p className="text-muted-foreground mb-4">Start your collection today.</p>
-                <Button variant="link" className="text-primary" onClick={() => setLocation("/shop")}>Shop Now</Button>
-              </div>
-            </div>
+            <Tabs defaultValue="orders" className="w-full">
+              <TabsContent value="profile" className="mt-0">
+                <Card className="bg-card/30 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="font-serif">Profile Information</CardTitle>
+                    <CardDescription>Your personal account details.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground">Full Name</Label>
+                        <p className="text-lg font-medium">{user?.name}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground">Email Address</Label>
+                        <p className="text-lg font-medium">{user?.email}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-muted-foreground">Membership Status</Label>
+                        <p className="text-lg font-medium">Verified Collector</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="orders" className="mt-0">
+                <h1 className="text-3xl font-serif font-bold mb-8">My Orders</h1>
+                <div className="space-y-6">
+                  {ordersLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2].map(i => (
+                        <div key={i} className="h-32 bg-card/20 animate-pulse rounded-lg" />
+                      ))}
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-12 border border-dashed border-white/10 rounded-lg">
+                      <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium">No orders yet</h3>
+                      <p className="text-muted-foreground mb-4">Start your collection today.</p>
+                      <Button variant="link" className="text-primary" onClick={() => setLocation("/shop")}>Shop Now</Button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {orders.map((order) => (
+                        <Card key={order.id} className="bg-card/30 border-white/10">
+                          <CardHeader className="flex flex-row items-center justify-between gap-4 py-4">
+                            <div>
+                              <CardTitle className="text-sm font-medium">Order #{order.id}</CardTitle>
+                              <CardDescription>{new Date(order.date).toLocaleDateString()}</CardDescription>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-primary">₹{order.total.toLocaleString('en-IN')}</p>
+                              <p className="text-xs uppercase tracking-wider text-muted-foreground">{order.status}</p>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="addresses" className="mt-0">
+                <Card className="bg-card/30 border-white/10">
+                  <CardHeader>
+                    <CardTitle className="font-serif">Saved Addresses</CardTitle>
+                    <CardDescription>Manage your delivery locations.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12">
+                      <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                      <p className="text-muted-foreground">No saved addresses found.</p>
+                      <Button variant="outline" className="mt-4 border-white/10">Add New Address</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

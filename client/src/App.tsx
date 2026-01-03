@@ -13,6 +13,7 @@ import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import OrderSuccess from "@/pages/OrderSuccess";
 import Account from "@/pages/Account";
+import AdminDashboard from "@/pages/AdminDashboard";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/order-success" component={OrderSuccess} />
       <Route path="/account" component={Account} />
       <Route path="/register" component={Account} />
+      <Route path="/admin" component={AdminDashboard} />
       
       {/* Footer Links */}
       <Route path="/contact" component={() => <PlaceholderPage title="Contact Us" />} />

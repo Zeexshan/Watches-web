@@ -1,0 +1,357 @@
+**Role & Context:**
+Act as a Senior Full-Stack Architect implementing Phase 4: Admin & Advanced Features for the "Circle Luxury" e-commerce application. The database connection infrastructure is stable and operational—focus only on adding new features without modifying existing connection logic.
+
+**CRITICAL CONSTRAINT:**
+The Google Sheets connection via `credentials.json` and `initSheets` is working but fragile. Do NOT modify, refactor, or rewrite any existing database connection code. Only ADD new functions to the existing `server/db.ts` file.
+
+---
+
+## **FEATURE 1: User Account & Order History**
+
+**Current State:**
+- `Account.tsx` displays placeholder tabs with no real data
+- No backend API exists to retrieve user-specific orders
+- Users cannot view their purchase history
+
+**Backend Requirements:**
+
+*New Endpoint: `GET /api/orders`*
+
+Create a flexible endpoint with conditional logic:
+
+- **When `req.query.email` parameter is present:**
+  - Filter and return only orders belonging to that specific user email
+  - Use case: Regular users viewing their own order history
+  
+- **When NO `email` parameter is provided:**
+  - Return ALL orders from the Orders sheet
+  - Requires admin authentication check
+  - Use case: Admin panel viewing all customer orders
+
+*Implementation Guidance:*
+- Add new function `getOrders(email?)` in `server/db.ts`
+- Query the `Orders` tab in Google Sheets
+- If email parameter exists, filter rows where order email matches
+- Return orders as array of objects with consistent structure
+
+**Frontend Requirements:**
+
+*File: `client/src/pages/Account.tsx`*
+
+Implement a tabbed interface with three sections:
+
+**Tab 1 - Orders History:**
+- Fetch orders on component mount: `GET /api/orders?email=${user.email}`
+- Display for each order:
+  - Order ID (unique identifier)
+  - Order Date (formatted for readability)
+  - Order Status (default to "Processing" if not specified)
+  - Total Amount (with currency symbol)
+- Handle empty state: Show message when user has no orders
+- Handle loading state: Show skeleton or spinner during fetch
+
+**Tab 2 - Profile Information:**
+- Display current user's name (from AuthContext)
+- Display current user's email (from AuthContext)
+- Consider adding "Last Login" or "Member Since" if available
+
+**Tab 3 - Saved Addresses:**
+- Display user's saved shipping addresses
+- If no addresses exist, show "No saved addresses" message
+- (Address CRUD operations can be future enhancement)
+
+*State Management:*
+- Track active tab (useState)
+- Track orders array (useState)
+- Track loading/error states for API calls
+- Implement proper error handling with user-friendly messages
+
+---
+
+## **FEATURE 2: Product Variant Image Switching**
+
+**Current State:**
+- Product Detail page has variant buttons (Gold, Black, Silver, etc.)
+- Clicking variants updates the selected variant text
+- Main product image does NOT change to match selected variant
+- Creates confusing user experience
+
+**Required Implementation:**
+
+*File: `client/src/pages/ProductDetail.tsx`*
+
+**Step 1 - Create Variant-to-Image Mapping:**
+
+Define a configuration object at the component or file level:
+
+```
+Example structure (do not copy, adapt to your actual image paths):
+VARIANT_IMAGES = {
+  "Gold": "path_to_gold_image",
+  "Black": "path_to_black_image",
+  "Silver": "path_to_silver_image"
+}
+```
+
+- Map each color variant to its corresponding image path
+- Use paths relative to your public/assets directory structure
+- Ensure image files exist before mapping
+
+**Step 2 - Implement Dynamic Image Update:**
+
+When user clicks a variant button:
+- Check if the selected variant exists in your mapping object
+- If found: Update the `selectedImage` state to the mapped image path
+- If not found: Either keep current image or fallback to default product image
+- The main product image display should reactively update based on `selectedImage` state
+
+*User Experience Goal:*
+Clicking "Gold" → Image instantly changes to gold watch
+Clicking "Black" → Image instantly changes to black watch
+No page reload, smooth visual transition
+
+---
+
+## **FEATURE 3: Admin Dashboard (Major New Feature)**
+
+**Access Control:**
+
+*Protected Route: `/admin`*
+
+- Implement route guard/protection logic
+- Only allow access if authenticated user's email matches admin whitelist
+- Admin whitelist: `["zixshankhan@gmail.com"]` (hardcoded for now)
+- Non-admin users attempting to access should be redirected to homepage with error message
+
+**Dashboard Overview Section:**
+
+Display key business metrics in card format:
+
+- **Total Sales Card:** Sum of all order totals (calculate from orders data)
+- **Total Orders Card:** Count of all orders
+- **Total Products Card:** Count of all products in inventory
+
+*Data Source:* Fetch from existing `/api/orders` and `/api/products` endpoints
+
+**Order Management Section:**
+
+*Purpose:* Allow admin to view and manage all customer orders
+
+Display a data table with columns:
+- Order ID
+- Customer Name (from order data)
+- Order Total (formatted with currency)
+- Payment Method (COD/Prepaid)
+- Current Status
+
+*Status Management Feature:*
+- Each row has a status dropdown/select menu
+- Available statuses: "Processing" → "Shipped" → "Delivered"
+- **MVP Implementation:** On status change, update the UI state and log to console
+- **Note:** Full database persistence can be added in future iteration
+- Consider adding visual indicators (badges/colors) for each status
+
+**Product Management Section:**
+
+*Purpose:* View inventory and add new products
+
+**Product List Table:**
+Display existing products with columns:
+- Product ID
+- Product Name
+- Current Stock quantity
+- Price (formatted with currency)
+
+**Add New Product Feature:**
+- "Add Product" button opens a form (modal or separate section)
+- Form fields required:
+  - Product Name (text input)
+  - Description (textarea)
+  - Price (number input)
+  - Stock Quantity (number input)
+  - Category (dropdown or text)
+  - Image URL (text input, populated via image upload - see Feature 4)
+  - Available Variants/Colors (optional, text or multi-select)
+
+*Form Validation:*
+- Ensure required fields are filled
+- Validate price and stock are positive numbers
+- Show validation errors inline
+
+*On Form Submit:*
+- Call new backend endpoint `POST /api/products`
+- Backend writes new row to Products tab in Google Sheets
+- On success: Clear form, close modal, refresh product list
+- On error: Display error message to admin
+
+---
+
+## **FEATURE 4: Image Upload System for Admin**
+
+**Goal:** Enable admin to upload product images directly through the admin interface instead of manually adding to file system.
+
+**Backend Implementation:**
+
+*Dependencies:*
+- Install `multer` package if not already present: `npm install multer`
+- Configure multer to handle multipart/form-data
+
+*New Endpoint: `POST /api/upload`*
+
+Requirements:
+- Accept image file uploads (jpg, png, webp formats)
+- Save uploaded files to `attached_assets` directory (or your designated assets folder)
+- Generate appropriate filename (consider using timestamp or UUID to avoid conflicts)
+- Return response with public-accessible URL path
+
+Response format example:
+```
+Success: { url: "/attached_assets/filename.png", success: true }
+Error: { error: "message", success: false }
+```
+
+*Security Considerations:*
+- Validate file type (only allow images)
+- Validate file size (set reasonable limit, e.g., 5MB)
+- Sanitize filename to prevent directory traversal attacks
+- Require admin authentication on this endpoint
+
+**Frontend Implementation:**
+
+*Location: Admin "Add Product" Form*
+
+**Upload Interface Options:**
+- Simple file input (`<input type="file" accept="image/*" />`)
+- OR drag-and-drop zone for better UX (consider using a library like react-dropzone)
+
+**Upload Flow:**
+
+1. **File Selection:**
+   - User selects or drags image file
+   - Show preview of selected image
+   - Display filename and file size
+
+2. **Upload Process:**
+   - On file selection, immediately upload to `POST /api/upload`
+   - Show loading indicator during upload
+   - Handle upload errors gracefully
+
+3. **URL Integration:**
+   - On successful upload, receive image URL from backend
+   - Auto-populate the "Image URL" field in the Add Product form
+   - Display uploaded image preview in the form
+
+4. **Product Creation:**
+   - When admin clicks "Save Product," the form includes the uploaded image URL
+   - Call `POST /api/products` with all product data including image URL
+   - Backend `addProduct` function writes complete product data to Google Sheets
+
+*Error Handling:*
+- Network failures during upload
+- Invalid file types
+- File size exceeded
+- Server errors
+
+---
+
+## **DATABASE MODIFICATIONS**
+
+*File: `server/db.ts`*
+
+**ONLY ADD these new functions—DO NOT modify existing code:**
+
+**Function 1: `getOrders(email?: string)`**
+- Query the Orders tab from Google Sheets
+- If email parameter provided: filter to matching orders only
+- If no email: return all orders
+- Return array of order objects with consistent structure
+
+**Function 2: `addProduct(productData)`**
+- Accept product object with all required fields
+- Append new row to Products tab in Google Sheets
+- Return success confirmation or error
+- Validate required fields before writing
+
+**Function 3 (Optional): `updateOrderStatus(orderId, newStatus)`**
+- If implementing full status persistence (beyond MVP console logging)
+- Find order by ID in Orders sheet
+- Update status column
+- Return updated order object
+
+---
+
+## **IMPLEMENTATION SEQUENCE**
+
+Follow this order to minimize integration issues:
+
+**Phase 1 - Backend Foundation:**
+1. Add `getOrders` function to `db.ts`
+2. Create `GET /api/orders` endpoint in `routes.ts`
+3. Add `addProduct` function to `db.ts`
+4. Create `POST /api/products` endpoint in `routes.ts`
+5. Install and configure multer
+6. Create `POST /api/upload` endpoint with file handling
+
+**Phase 2 - User-Facing Features:**
+7. Implement Account.tsx with tabbed interface
+8. Connect Orders tab to backend API
+9. Test order history display with real data
+10. Implement Product Detail variant image switching
+11. Test variant switching across different products
+
+**Phase 3 - Admin Interface:**
+12. Create Admin Dashboard page component
+13. Implement admin route protection
+14. Build Dashboard Overview with metrics cards
+15. Build Order Management table
+16. Build Product Management table
+17. Create Add Product form/modal
+18. Implement image upload interface
+19. Connect all admin features to backend APIs
+
+**Phase 4 - Testing & Refinement:**
+20. Test complete flow: Upload image → Add product → View in product list
+21. Test order fetching for both admin and regular users
+22. Test variant image switching across all products
+23. Verify Google Sheets data integrity after operations
+
+---
+
+## **TESTING CHECKLIST**
+
+Before considering Phase 4 complete, verify:
+
+**User Account:**
+- [ ] Orders display correctly for logged-in user
+- [ ] Empty state shows when user has no orders
+- [ ] Profile tab displays correct user information
+- [ ] Tab switching works smoothly
+
+**Product Variants:**
+- [ ] Variant buttons are clickable and responsive
+- [ ] Main image updates when variant is selected
+- [ ] Image paths are correct and images load properly
+
+**Admin Dashboard:**
+- [ ] Non-admin users cannot access `/admin` route
+- [ ] Admin can access after authentication check
+- [ ] Metrics display accurate counts and totals
+- [ ] Order table loads all orders correctly
+- [ ] Product table displays all products
+
+**Image Upload:**
+- [ ] File selection works
+- [ ] Upload progress is visible
+- [ ] Uploaded images appear in attached_assets directory
+- [ ] Image URL is correctly returned and populated
+- [ ] Uploaded images display properly when product is created
+
+**Data Integrity:**
+- [ ] New products appear in Google Sheets Products tab
+- [ ] Product data structure matches sheet columns exactly
+- [ ] Orders are fetched without errors
+- [ ] No existing data is corrupted or overwritten
+
+---
+
+**START BY:** Examining the current `server/db.ts` file to understand the existing Google Sheets connection pattern, then add the new `getOrders` and `addProduct` functions following that same pattern.

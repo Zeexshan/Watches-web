@@ -57,6 +57,68 @@ export async function addUser(user: any) {
   });
   return { id: 1, username: user.username };
 }
+
+// --- NEW: Get Orders Function ---
+export async function getOrders(email?: string) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Orders"];
+  const rows = await sheet.getRows();
+
+  const orders = rows.map((row) => ({
+    id: row.get("order_id"),
+    email: row.get("user_email"),
+    address: row.get("shipping_address"),
+    pincode: row.get("pincode"),
+    items: JSON.parse(row.get("items") || "[]"),
+    paymentMethod: row.get("payment_method"),
+    total: parseInt(row.get("product_amount_due") || "0"),
+    status: row.get("status") || "Processing",
+    date: row.get("date"),
+  }));
+
+  if (email) {
+    return orders.filter((o) => o.email === email);
+  }
+  return orders;
+}
+
+// --- NEW: Add Product Function ---
+export async function addProduct(product: any) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Products"];
+  
+  // Get next ID
+  const rows = await sheet.getRows();
+  const nextId = rows.length > 0 ? Math.max(...rows.map(r => parseInt(r.get("id") || "0"))) + 1 : 1;
+
+  await sheet.addRow({
+    id: nextId,
+    name: product.name,
+    price: product.price,
+    category: product.category,
+    description: product.description,
+    image_url: product.image,
+    stock: product.stock,
+    variant: product.variants?.[0]?.color || "",
+    is_featured: "FALSE",
+  });
+  return { id: nextId, ...product };
+}
+
+// --- NEW: Update Order Status Function ---
+export async function updateOrderStatus(orderId: string, newStatus: string) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Orders"];
+  const rows = await sheet.getRows();
+  const row = rows.find(r => r.get("order_id") === orderId);
+  if (row) {
+    row.set("status", newStatus);
+    await row.save();
+    return true;
+  }
+  return false;
+}
+
 // ... keep existing imports and functions ...
 
 // --- NEW: Real Login Function ---

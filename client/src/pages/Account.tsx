@@ -1,0 +1,199 @@
+import { useState, useEffect } from "react";
+import Layout from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Package, MapPin, LogOut, User as UserIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { useLocation } from "wouter";
+
+export default function Account() {
+  const { user, isLoggedIn, login, logout, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+    
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        login(data.user);
+        toast({ title: "Welcome back!", description: `Hello ${data.user.name}` });
+        
+        const searchParams = new URLSearchParams(window.location.search);
+        const from = searchParams.get("from");
+        if (from === "checkout") {
+          setLocation("/checkout");
+        }
+      } else {
+        toast({ variant: "destructive", title: "Login Failed", description: data.message });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Something went wrong" });
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = (document.getElementById('reg-name') as HTMLInputElement).value;
+    const email = (document.getElementById('reg-email') as HTMLInputElement).value;
+    const password = (document.getElementById('reg-password') as HTMLInputElement).value;
+
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, username: email, password }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        const loginRes = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: email, password }),
+        });
+        const loginData = await loginRes.json();
+        if (loginData.success) {
+          login(loginData.user);
+          toast({ title: "Account Created", description: "Welcome to Circle Luxury" });
+          
+          const searchParams = new URLSearchParams(window.location.search);
+          const from = searchParams.get("from");
+          if (from === "checkout") {
+            setLocation("/checkout");
+          }
+        }
+      } else {
+        toast({ variant: "destructive", title: "Registration Failed" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error" });
+    }
+  };
+
+  if (isLoading) return null;
+
+  if (!isLoggedIn) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-24 flex justify-center">
+          <Card className="w-full max-w-md bg-card/30 border-white/10">
+            <CardHeader className="text-center">
+              <CardTitle className="font-serif text-3xl">Welcome to Circle</CardTitle>
+              <CardDescription>Sign in to access your exclusive benefits.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-background/50">
+                  <TabsTrigger value="login">Sign In</TabsTrigger>
+                  <TabsTrigger value="register">Register</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input id="email" type="email" placeholder="john@example.com" className="bg-background/50 border-white/10" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input id="password" type="password" className="bg-background/50 border-white/10" required />
+                    </div>
+                    <Button type="submit" className="w-full uppercase tracking-widest font-serif font-bold bg-primary text-black hover:bg-primary/90">
+                      Sign In
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="register">
+                  <form className="space-y-4 mt-4" onSubmit={handleRegister}>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-name">Full Name</Label>
+                      <Input id="reg-name" placeholder="John Doe" className="bg-background/50 border-white/10" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-email">Email</Label>
+                      <Input id="reg-email" type="email" placeholder="john@example.com" className="bg-background/50 border-white/10" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-password">Password</Label>
+                      <Input id="reg-password" type="password" className="bg-background/50 border-white/10" required />
+                    </div>
+                    <Button type="submit" variant="outline" className="w-full uppercase tracking-widest font-serif font-bold border-white/20 hover:bg-white/10 text-white">
+                      Create Account
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col md:flex-row gap-8">
+          <aside className="w-full md:w-64 space-y-2">
+            <Card className="bg-card/30 border-white/10 p-4">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-black font-bold text-xl">
+                  {user?.name?.[0] || 'U'}
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold">{user?.name}</h3>
+                  <p className="text-xs text-muted-foreground">Member</p>
+                </div>
+              </div>
+              <nav className="space-y-1">
+                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5">
+                  <UserIcon className="mr-2 h-4 w-4" /> Profile
+                </Button>
+                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5 text-primary bg-white/5">
+                  <Package className="mr-2 h-4 w-4" /> Orders
+                </Button>
+                <Button variant="ghost" className="w-full justify-start hover:text-primary hover:bg-white/5">
+                  <MapPin className="mr-2 h-4 w-4" /> Addresses
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-500/10 mt-8"
+                  onClick={logout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                </Button>
+              </nav>
+            </Card>
+          </aside>
+
+          <div className="flex-1">
+            <h1 className="text-3xl font-serif font-bold mb-8">My Orders</h1>
+            <div className="space-y-6">
+              <div className="text-center py-12 border border-dashed border-white/10 rounded-lg">
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">No orders yet</h3>
+                <p className="text-muted-foreground mb-4">Start your collection today.</p>
+                <Button variant="link" className="text-primary" onClick={() => setLocation("/shop")}>Shop Now</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}

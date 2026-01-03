@@ -1,0 +1,44 @@
+Act as a Senior Full Stack Developer. We are building a luxury e-commerce web application named "Circle" (or Client Brand Name).
+
+### 1. Project Overview
+* **Business:** Selling Luxury Watches, Belts, Sunglasses, and Attar.
+* **Target Audience:** High-end customers.
+* **Key Feature (CRITICAL):** "Partial COD" Checkout System.
+    * If a user selects "Cash on Delivery", they CANNOT place the order immediately.
+    * They must pay the **Shipping Charge (e.g., ₹100)** online first via Razorpay.
+    * The remaining product cost is collected via COD.
+    * If they select "Prepaid", they pay the full amount online.
+
+### 2. Tech Stack Requirements
+* **Frontend:** React.js + Vite + Tailwind CSS.
+* **Backend:** Node.js + Express.
+* **Database:** Google Sheets (Use the 'google-spreadsheet' npm package).
+    * *Note:* Set up the code structure to connect to Google Sheets, but create a local `mock_db.json` file for now so we can test the UI without API keys immediately.
+* **Animations:** Framer Motion (for that "Luxury" feel).
+
+### 3. Design System (Strict Adherence)
+Based on the provided design concepts, use this exact color palette:
+* **Backgrounds:** Black Pearl (`#020B0E`), Woodsmoke (`#131B1A`), Stellar Explorer (`#031D24`).
+* **Accents/Buttons:** Spicy Sweetcorn (`#F3AF00`) - Use this for "Add to Cart" and "Pay Now".
+* **Text:** Wild Sand (`#F4F3F3`), Pale Silver (`#C3BFB3`).
+* **Typography:** Use 'Montserrat' (Google Fonts) for body and 'Playfair Display' or similar Serif for Headings (simulating the Kannada MN look).
+
+### 4. Site Structure (Sitemap)
+Create the routing based on this hierarchy:
+* **Home Page:** Hero Section, Best Sellers, Category Grid.
+* **Shop:** Filter by Category (Watches, Belts, Goggles, Attar).
+    * **Product Detail:** Image Gallery, Variant Selector (Color/Size), Description, "Add to Cart".
+* **Cart Flow:** Shopping Cart -> Delivery Details -> Payment Method Selection.
+* **User Account:** Sign In, Order History, Saved Addresses.
+
+### 5. Backend Logic needed
+* **Shipping Logic:** Create a placeholder function `calculateShipping(pincode)` that returns a cost (e.g., ₹100). (We will connect Delhivery API here later).
+* **Payment Logic:**
+    * Endpoint `/create-order`: Handles the Razorpay initialization.
+    * If COD selected: Amount = Shipping Cost.
+    * If Prepaid selected: Amount = Total Cost.
+
+### Task 1: Project Setup
+Initialize the project structure. Set up the React Frontend with the specific Colors in `tailwind.config.js`. Set up the Node.js backend server entry point. Create the `mock_db.json` with 5 sample "Luxury Watch" products with variants.
+
+Start by generating the file structure and the Tailwind Configuration.

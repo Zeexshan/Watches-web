@@ -1,0 +1,162 @@
+I'll help you improve this prompt to be clearer and more actionable while keeping all your existing requirements. Here's an enhanced version:
+
+Role & Context:
+Act as a Senior Full-Stack Engineer conducting a technical audit and bug fix for "Circle Luxury," a React + Node.js e-commerce application that is 90% complete but has critical blocking issues preventing production use.
+Technical Stack (Fixed - Do Not Modify):
+
+Frontend: React with Vite, Tailwind CSS, Framer Motion
+Backend: Node.js with Express
+Database: Google Sheets (3 tabs: Users, Orders, Products) via google-spreadsheet package
+Authentication: Custom implementation using the Users sheet
+
+
+CRITICAL ISSUES REQUIRING FIXES:
+Issue #1: Authentication Session Loss (HIGHEST PRIORITY)
+Current Broken Behavior:
+
+User registration successfully writes to Google Sheets
+User is immediately logged out after registration or login
+Navigating to Shop, Cart, or Profile pages loses authentication state
+User cannot access protected routes or saved data
+
+Required Fix:
+
+Implement persistent session storage to maintain login state across page refreshes and navigation
+On application initialization, check for existing session data before rendering any UI
+Ensure the AuthContext properly restores user state on mount
+Verify that navigation does not trigger logout
+Test that protected routes (Profile, Checkout) remain accessible after login
+
+Files to Investigate:
+
+client/src/context/AuthContext.tsx - Check initialization, state management, and persistence logic
+server/routes.ts - Verify authentication endpoints return correct data
+Any middleware or route guards affecting auth state
+
+
+Issue #2: Cart-to-Checkout Flow Breaks on Login
+Current Broken Behavior:
+
+Guest users can add items to cart successfully
+Clicking "Checkout" as a guest causes:
+
+Cart items disappear after login
+User stuck in redirect loop
+Unable to complete purchase
+
+
+Order submission to Google Sheets fails silently or throws errors
+
+Required Fix:
+
+Preserve cart contents when transitioning from guest to authenticated user
+On checkout attempt by guest: redirect to login → after successful login → automatically return to checkout page with cart intact
+Ensure order data successfully writes to the Orders tab in Google Sheets
+Verify the order object structure matches the sheet's expected columns
+Add proper error handling for failed order submissions
+
+Files to Investigate:
+
+client/src/pages/Checkout.tsx - Login redirect and cart preservation logic
+server/db.ts - Order creation method for Google Sheets integration
+Cart state management (Context or component state)
+
+
+Issue #3: Missing Routes Return 404 Errors
+Current Broken Behavior:
+
+Footer links (Contact Us, FAQ, Shipping Policy, etc.) lead to 404 pages
+Site appears incomplete and unprofessional
+
+Required Fix:
+
+Create basic placeholder pages for all footer links
+Add corresponding routes to the router configuration
+Ensure pages have minimal content (heading, placeholder text) to avoid broken links
+
+Files to Modify:
+
+client/src/App.tsx - Add missing route definitions
+Create new page components in appropriate directory
+
+
+BUSINESS LOGIC REQUIREMENT (MUST PRESERVE EXACTLY):
+"Partial COD" Payment System:
+This is a custom payment model - do not treat it as standard Cash on Delivery.
+Two Payment Scenarios:
+Scenario A - Full Prepaid:
+
+User pays 100% of total order value online
+Standard checkout flow
+
+Scenario B - Partial COD:
+
+User must pay shipping fee (₹100) online during checkout to confirm order
+Remaining product amount is collected at delivery
+Order record in Google Sheets must include these specific fields:
+
+payment_method: "COD"
+shipping_fee_paid: "TRUE" or boolean true
+product_amount_due: [calculated remaining amount]
+
+
+
+Critical Requirements:
+
+Checkout page must correctly calculate and display the upfront shipping fee
+Payment gateway integration must process only the shipping fee for COD orders
+Backend validation must ensure shipping fee is paid before order confirmation
+Google Sheets order entry must accurately reflect this payment split
+
+
+ADDITIONAL POLISH ITEMS:
+Home Page Visual Issues:
+
+Categories section (Watches, Belts, etc.) has incorrect or missing background images
+Text overlaps or becomes unreadable on mobile devices
+Verify image paths and responsive text sizing
+
+Mobile Responsiveness:
+
+Product Detail page has layout issues on small screens
+Cart summary has padding/margin problems on mobile
+Test all pages at mobile breakpoints (320px, 375px, 768px)
+
+
+AUDIT APPROACH:
+Phase 1 - Authentication Analysis:
+
+Examine AuthContext.tsx for session initialization and persistence implementation
+Check server/routes.ts for login/register endpoint responses
+Identify where and why session state is being cleared
+Document the current flow vs. expected flow
+
+Phase 2 - Cart & Order Flow:
+
+Trace cart state management from guest → login → checkout
+Review order submission code in Checkout.tsx and backend
+Test Google Sheets write operations in server/db.ts
+Verify "Partial COD" calculation logic
+
+Phase 3 - Route Completion:
+
+List all footer links and identify missing routes
+Create minimal page components
+Add routes to router configuration
+
+Phase 4 - UI/UX Testing:
+
+Test responsive behavior across device sizes
+Fix image display and text readability issues
+
+
+EXPECTED OUTCOMES:
+After fixes, the application should:
+
+Maintain user login state persistently across all navigation and page refreshes
+Allow guests to shop → login at checkout → complete purchase without losing cart
+Successfully save orders to Google Sheets with correct "Partial COD" data structure
+Have no broken links (all footer routes working)
+Display properly on mobile devices without layout breaks
+
+Start your audit by examining client/src/context/AuthContext.tsx and server/routes.ts to diagnose the root cause of session loss.

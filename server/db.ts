@@ -26,21 +26,38 @@ export async function getProducts() {
   const sheet = doc.sheetsByTitle["Products"];
   const rows = await sheet.getRows();
 
-  return rows.map((row) => ({
-    id: parseInt(row.get("id")),
-    name: row.get("name"),
-    brand: "Luxury",
-    price: parseInt(row.get("price")),
-    category: row.get("category"),
-    description: row.get("description"),
-    image: row.get("image_url") || "/attached_assets/watch1.png",
-    images: row.get("image_url") ? [row.get("image_url")] : [],
-    isBestSeller: row.get("is_featured") === "TRUE",
-    isNew: false,
-    variants: row.get("variant")
-      ? [{ color: row.get("variant"), stock: parseInt(row.get("stock")) }]
-      : [],
-  }));
+  return rows.map((row) => {
+    let variants = [];
+    try {
+      const variantData = row.get("variants") || row.get("variant");
+      if (variantData) {
+        // Try to parse as JSON first (Task 2)
+        if (variantData.startsWith('[') || variantData.startsWith('{')) {
+          variants = JSON.parse(variantData);
+        } else {
+          // Fallback to old simple variant structure
+          variants = [{ color: variantData, stock: parseInt(row.get("stock") || "0"), image: row.get("image_url") }];
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing variants for product", row.get("id"), e);
+      variants = [];
+    }
+
+    return {
+      id: parseInt(row.get("id")),
+      name: row.get("name"),
+      brand: "Luxury",
+      price: parseInt(row.get("price")),
+      category: row.get("category"),
+      description: row.get("description"),
+      image: row.get("image_url") || "/attached_assets/watch1.png",
+      images: row.get("image_url") ? [row.get("image_url")] : [],
+      isBestSeller: row.get("is_featured") === "TRUE",
+      isNew: false,
+      variants: variants,
+    };
+  });
 }
 
 // --- NEW: Add User Function ---
@@ -99,7 +116,7 @@ export async function addProduct(product: any) {
     description: product.description,
     image_url: product.image,
     stock: product.stock,
-    variant: product.variants?.[0]?.color || "",
+    variants: JSON.stringify(product.variants || []),
     is_featured: "FALSE",
   });
   return { id: nextId, ...product };

@@ -1,29 +1,25 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { getProducts, addOrder, addUser, loginUser, getOrders, addProduct, updateOrderStatus } from "./db";
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.resolve(process.cwd(), "attached_assets");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+import { v2 as cloudinary } from "cloudinary";
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure multer for image uploads (buffer storage for Cloudinary)
+const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: any, file: any, cb: any) => {
     const allowedTypes = /jpeg|jpg|png|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
@@ -92,14 +88,30 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/upload", upload.single("image"), (req, res) => {
+  app.post("/api/upload", upload.single("image"), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ success: false, error: "No file uploaded" });
       }
-      const url = `/attached_assets/${req.file.filename}`;
-      res.json({ success: true, url });
+
+      // Upload to Cloudinary using stream
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "circle-luxury/products",
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary Upload Error:", error);
+            return res.status(500).json({ success: false, error: "Cloudinary upload failed" });
+          }
+          res.json({ success: true, url: result?.secure_url });
+        }
+      );
+
+      uploadStream.end(req.file.buffer);
     } catch (error: any) {
+      console.error("Upload Route Error:", error);
       res.status(500).json({ success: false, error: error.message });
     }
   });

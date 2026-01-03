@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+
 export default function AdminDashboard() {
   const { user, isLoggedIn } = useAuth();
   const [, setLocation] = useLocation();
@@ -21,16 +23,11 @@ export default function AdminDashboard() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
+  const [variants, setVariants] = useState([{ color: "", stock: 0, image: "" }]);
 
   const isAdmin = user?.email === "zixshankhan@gmail.com";
 
-  useEffect(() => {
-    if (!isLoggedIn || !isAdmin) {
-      setLocation("/");
-      toast({ variant: "destructive", title: "Access Denied", description: "Admin access only." });
-    }
-  }, [isLoggedIn, isAdmin]);
-
+  // Analytics Data preparation
   const { data: orders = [] } = useQuery<any[]>({
     queryKey: ["/api/orders"],
   });
@@ -57,6 +54,55 @@ export default function AdminDashboard() {
     },
     onSettled: () => setIsUploading(false),
   });
+
+  const salesData = orders.reduce((acc: any[], order) => {
+    const date = new Date(order.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const existing = acc.find(item => item.date === date);
+    if (existing) {
+      existing.sales += order.total;
+    } else {
+      acc.push({ date, sales: order.total });
+    }
+    return acc;
+  }, []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const statusData = orders.reduce((acc: any[], order) => {
+    const existing = acc.find(item => item.name === order.status);
+    if (existing) {
+      existing.value++;
+    } else {
+      acc.push({ name: order.status, value: 1 });
+    }
+    return acc;
+  }, []);
+
+  const COLORS = ['#D4AF37', '#1E1E1E', '#3A3A3A', '#8E8E8E'];
+
+  const addVariant = () => setVariants([...variants, { color: "", stock: 0, image: "" }]);
+  const removeVariant = (index: number) => setVariants(variants.filter((_, i) => i !== index));
+  const updateVariant = (index: number, field: string, value: any) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setVariants(newVariants);
+  };
+
+  const handleVariantImageUpload = async (index: number, file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      setIsUploading(true);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        updateVariant(index, "image", data.url);
+        toast({ title: "Variant Image Uploaded" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Upload Failed" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
@@ -90,9 +136,10 @@ export default function AdminDashboard() {
       name: formData.get("name"),
       description: formData.get("description"),
       price: parseInt(formData.get("price") as string),
-      stock: parseInt(formData.get("stock") as string),
+      stock: variants.reduce((acc, v) => acc + (v.stock || 0), 0),
       category: formData.get("category"),
       image: uploadedUrl,
+      variants: variants,
     };
     addProductMutation.mutate(data);
   };
@@ -139,10 +186,44 @@ export default function AdminDashboard() {
                     <Label htmlFor="price">Price (₹)</Label>
                     <Input id="price" name="price" type="number" required className="bg-background/50 border-white/10" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stock">Stock Quantity</Label>
-                    <Input id="stock" name="stock" type="number" required className="bg-background/50 border-white/10" />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Label>Product Variants</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="h-8 border-white/10">
+                      <Plus className="h-3 w-3 mr-1" /> Add Variant
+                    </Button>
                   </div>
+                  {variants.map((v, i) => (
+                    <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-sm space-y-4">
+                      <div className="flex gap-4">
+                        <div className="flex-1 space-y-2">
+                          <Label className="text-xs">Color/Name</Label>
+                          <Input value={v.color} onChange={(e) => updateVariant(i, "color", e.target.value)} placeholder="Gold" className="bg-background/50 border-white/10 h-8" />
+                        </div>
+                        <div className="w-24 space-y-2">
+                          <Label className="text-xs">Stock</Label>
+                          <Input type="number" value={v.stock} onChange={(e) => updateVariant(i, "stock", parseInt(e.target.value))} className="bg-background/50 border-white/10 h-8" />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeVariant(i)} className="mt-6 h-8 w-8 text-red-400">
+                          <Plus className="h-4 w-4 rotate-45" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <Label className="text-xs block mb-2">Variant Image</Label>
+                          <div className="flex items-center gap-3">
+                            <Button type="button" variant="outline" size="sm" className="h-8 border-white/10 relative overflow-hidden">
+                              <Upload className="h-3 w-3 mr-2" /> Upload
+                              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={(e) => e.target.files?.[0] && handleVariantImageUpload(i, e.target.files[0])} />
+                            </Button>
+                            {v.image && <img src={v.image} className="h-8 w-8 object-contain bg-black/20" />}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <div className="space-y-2">
                   <Label>Product Image</Label>
@@ -202,6 +283,41 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="text-3xl font-serif font-bold">{products.length}</div>
             </CardContent>
+          </Card>
+        </div>
+
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          <Card className="bg-card/30 border-white/10 p-6">
+            <h3 className="text-lg font-serif font-bold mb-6 uppercase tracking-widest text-primary">Sales Trend</h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="date" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: '4px' }} itemStyle={{ color: '#D4AF37' }} />
+                  <Line type="monotone" dataKey="sales" stroke="#D4AF37" strokeWidth={2} dot={{ fill: '#D4AF37' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="bg-card/30 border-white/10 p-6">
+            <h3 className="text-lg font-serif font-bold mb-6 uppercase tracking-widest text-primary">Order Status</h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {statusData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid #ffffff10', borderRadius: '4px' }} />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </Card>
         </div>
 

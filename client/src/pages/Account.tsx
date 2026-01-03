@@ -217,23 +217,37 @@ export default function Account() {
                 <Card className="bg-card/30 border-white/10">
                   <CardHeader>
                     <CardTitle className="font-serif">Profile Information</CardTitle>
-                    <CardDescription>Your personal account details.</CardDescription>
+                    <CardDescription>Update your personal account details.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground">Full Name</Label>
-                        <p className="text-lg font-medium">{user?.name}</p>
+                  <CardContent>
+                    <form className="space-y-6" onSubmit={(e) => {
+                      e.preventDefault();
+                      toast({ title: "Profile Updated", description: "Your changes have been saved." });
+                    }}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input id="name" defaultValue={user?.name} className="bg-background/50 border-white/10" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input id="email" defaultValue={user?.email} disabled className="bg-background/20 border-white/5 cursor-not-allowed opacity-50" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input id="phone" placeholder="+91 98765 43210" className="bg-background/50 border-white/10" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Membership Tier</Label>
+                          <div className="h-10 px-3 flex items-center bg-primary/10 border border-primary/20 text-primary rounded-md font-serif italic">
+                            Verified Circle Member
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground">Email Address</Label>
-                        <p className="text-lg font-medium">{user?.email}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-muted-foreground">Membership Status</Label>
-                        <p className="text-lg font-medium">Verified Collector</p>
-                      </div>
-                    </div>
+                      <Button type="submit" className="bg-primary text-black hover:bg-primary/90">
+                        Save Changes
+                      </Button>
+                    </form>
                   </CardContent>
                 </Card>
               </TabsContent>

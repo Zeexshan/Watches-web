@@ -26,17 +26,23 @@ export default function ProductDetail() {
   const handleVariantChange = (variant: any) => {
     setSelectedVariant(variant);
     
-    // Check for variant specific images
-    // If our variant has a color name that matches an image in attached_assets
-    const colorImages: Record<string, string> = {
-      "Gold": "/attached_assets/watch1.png",
-      "Black": "/attached_assets/watch2.png",
-      "Silver": "/attached_assets/watch3.png",
-      "Rose Gold": "/attached_assets/watch4.png"
-    };
+    // Check for variant specific images from the new structure
+    if (variant.image) {
+      setSelectedImage(variant.image);
+    } else {
+      // Fallback to existing manual mapping for legacy data
+      const colorImages: Record<string, string> = {
+        "Gold": "/attached_assets/watch1.png",
+        "Black": "/attached_assets/watch2.png",
+        "Silver": "/attached_assets/watch3.png",
+        "Rose Gold": "/attached_assets/watch4.png"
+      };
 
-    if (colorImages[variant.color]) {
-      setSelectedImage(colorImages[variant.color]);
+      if (colorImages[variant.color]) {
+        setSelectedImage(colorImages[variant.color]);
+      } else {
+        setSelectedImage(product.image);
+      }
     }
   };
 
@@ -116,13 +122,18 @@ export default function ProductDetail() {
                   {product.variants.map((variant: any, idx: number) => (
                     <button
                       key={idx}
+                      disabled={variant.stock === 0}
                       onClick={() => handleVariantChange(variant)}
-                      className={`px-6 py-3 border text-sm uppercase tracking-wider transition-all
+                      className={`px-6 py-3 border text-sm uppercase tracking-wider transition-all relative
                         ${selectedVariant?.color === variant.color 
                           ? 'bg-primary border-primary text-black font-bold' 
-                          : 'border-white/20 text-muted-foreground hover:border-white/50'}`}
+                          : 'border-white/20 text-muted-foreground hover:border-white/50'}
+                        ${variant.stock === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                     >
                       {variant.color}
+                      {variant.stock < 5 && variant.stock > 0 && (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1 rounded-full">Low Stock</span>
+                      )}
                     </button>
                   ))}
                 </div>

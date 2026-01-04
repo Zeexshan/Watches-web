@@ -122,6 +122,19 @@ export async function addProduct(product: any) {
   return { id: nextId, ...product };
 }
 
+// --- NEW: Delete Product Function ---
+export async function deleteProduct(productId: number) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Products"];
+  const rows = await sheet.getRows();
+  const row = rows.find(r => parseInt(r.get("id")) === productId);
+  if (row) {
+    await row.delete();
+    return true;
+  }
+  throw new Error("Product not found");
+}
+
 // --- NEW: Update Order Status Function ---
 export async function updateOrderStatus(orderId: string, newStatus: string) {
   await initSheets();
@@ -134,19 +147,6 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
     return true;
   }
   return false;
-}
-
-// --- NEW: Delete Product Function ---
-export async function deleteProduct(productId: number) {
-  await initSheets();
-  const sheet = doc.sheetsByTitle["Products"];
-  const rows = await sheet.getRows();
-  const row = rows.find(r => parseInt(r.get("id")) === productId);
-  if (row) {
-    await row.delete();
-    return true;
-  }
-  throw new Error("Product not found");
 }
 
 // ... keep existing imports and functions ...

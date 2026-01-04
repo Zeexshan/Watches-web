@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
-import { getProducts, addOrder, addUser, loginUser, getOrders, addProduct, updateOrderStatus } from "./db";
+import { getProducts, addOrder, addUser, loginUser, getOrders, addProduct, updateOrderStatus, deleteProduct } from "./db";
 
 import { v2 as cloudinary } from "cloudinary";
 

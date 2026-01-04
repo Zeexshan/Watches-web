@@ -10,7 +10,7 @@ export default function NotFound() {
         <div className="flex flex-row items-center justify-center gap-2 md:gap-4 lg:gap-6 mb-8 md:mb-12 lg:mb-16">
           <span className="text-[10rem] md:text-[15rem] lg:text-[20rem] font-serif font-light text-white leading-none tracking-tighter opacity-90">4</span>
           
-          <div className="relative w-[10rem] h-[10rem] md:w-[15rem] md:h-[15rem] lg:w-[20rem] lg:h-[20rem] flex items-center justify-center">
+          <div className="relative w-[12rem] h-[12rem] md:w-[18rem] md:h-[18rem] lg:w-[24rem] lg:h-[24rem] flex items-center justify-center translate-y-8 md:translate-y-12 lg:translate-y-16">
             <img 
               src="/attached_assets/watch1.png" 
               alt="Luxury Watch"

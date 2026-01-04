@@ -1,8 +1,8 @@
-# Circle Luxury E-Commerce Application
+# Choiceful Accessories E-Commerce Application
 
 ## Overview
 
-Circle Luxury is a high-end e-commerce web application for selling luxury watches, belts, sunglasses, and attar (perfume). The application features a "Partial COD" checkout system where Cash on Delivery orders require upfront payment of shipping charges via Razorpay before the order can be placed.
+Choiceful Accessories is a high-end e-commerce web application for selling luxury watches, belts, sunglasses, and attar (perfume). The application features a "Partial COD" checkout system where Cash on Delivery orders require upfront payment of shipping charges via Razorpay before the order can be placed.
 
 The project is built as a full-stack TypeScript application with React frontend and Express backend, using Google Sheets as the primary database for storing Users, Orders, and Products data.
 

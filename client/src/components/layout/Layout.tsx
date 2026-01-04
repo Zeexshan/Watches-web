@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     Home
                   </Link>
                   <Link href="/shop" className="text-xl font-medium hover:text-primary transition-colors">
-                    Choicefull Accessories
+                    Shop
                   </Link>
                   <Link href="/categories" className="text-xl font-medium hover:text-primary transition-colors">
                     Categories
@@ -49,7 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Logo */}
           <Link href="/" className="text-2xl md:text-3xl font-serif tracking-widest font-bold text-foreground">
-            CIRCLE<span className="text-primary">.</span>
+            CHOICEFUL<span className="text-primary">.</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -58,7 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Home
             </Link>
             <Link href="/shop" className="text-sm uppercase tracking-widest hover:text-primary transition-colors duration-300">
-              Choicefull Accessories
+              Shop
             </Link>
             <Link href="/shop" className="text-sm uppercase tracking-widest hover:text-primary transition-colors duration-300">
               Categories
@@ -121,7 +121,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="space-y-4">
-              <h3 className="text-2xl font-serif font-bold tracking-widest">CIRCLE<span className="text-primary">.</span></h3>
+              <h3 className="text-2xl font-serif font-bold tracking-widest">CHOICEFUL<span className="text-primary">.</span></h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
                 Curating the finest luxury timepieces and accessories for the discerning individual. Elegance in every detail.
               </p>
@@ -158,7 +158,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Circle Luxury. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Choiceful Accessories. All rights reserved.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>

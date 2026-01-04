@@ -136,6 +136,19 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   return false;
 }
 
+// --- NEW: Delete Product Function ---
+export async function deleteProduct(productId: number) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Products"];
+  const rows = await sheet.getRows();
+  const row = rows.find(r => parseInt(r.get("id")) === productId);
+  if (row) {
+    await row.delete();
+    return true;
+  }
+  throw new Error("Product not found");
+}
+
 // ... keep existing imports and functions ...
 
 // --- NEW: Real Login Function ---

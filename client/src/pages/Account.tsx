@@ -14,6 +14,7 @@ export default function Account() {
   const { user, isLoggedIn, login, logout, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("orders");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,18 +178,28 @@ export default function Account() {
                 </div>
               </div>
               <nav className="space-y-1">
-                <Tabs defaultValue="orders" className="w-full border-none">
-                  <TabsList className="flex flex-col h-auto w-full bg-transparent gap-1 p-0">
-                    <TabsTrigger value="profile" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
-                      <UserIcon className="mr-2 h-4 w-4" /> Profile
-                    </TabsTrigger>
-                    <TabsTrigger value="orders" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
-                      <Package className="mr-2 h-4 w-4" /> Orders
-                    </TabsTrigger>
-                    <TabsTrigger value="addresses" className="w-full justify-start px-3 py-2 data-[state=active]:bg-white/5 data-[state=active]:text-primary hover:bg-white/5 bg-transparent">
-                      <MapPin className="mr-2 h-4 w-4" /> Addresses
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="flex flex-col gap-1">
+                  <Button 
+                    variant="ghost" 
+                    className={`w-full justify-start px-3 py-2 hover:bg-white/5 ${activeTab === 'profile' ? 'bg-white/5 text-primary' : 'bg-transparent text-muted-foreground'}`}
+                    onClick={() => setActiveTab('profile')}
+                  >
+                    <UserIcon className="mr-2 h-4 w-4" /> Profile
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className={`w-full justify-start px-3 py-2 hover:bg-white/5 ${activeTab === 'orders' ? 'bg-white/5 text-primary' : 'bg-transparent text-muted-foreground'}`}
+                    onClick={() => setActiveTab('orders')}
+                  >
+                    <Package className="mr-2 h-4 w-4" /> Orders
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className={`w-full justify-start px-3 py-2 hover:bg-white/5 ${activeTab === 'addresses' ? 'bg-white/5 text-primary' : 'bg-transparent text-muted-foreground'}`}
+                    onClick={() => setActiveTab('addresses')}
+                  >
+                    <MapPin className="mr-2 h-4 w-4" /> Addresses
+                  </Button>
 
                   <Button 
                     variant="ghost" 
@@ -197,7 +208,7 @@ export default function Account() {
                   >
                     <LogOut className="mr-2 h-4 w-4" /> Sign Out
                   </Button>
-                </Tabs>
+                </div>
               </nav>
             </Card>
             {user?.email === "zixshankhan@gmail.com" && (
@@ -212,47 +223,47 @@ export default function Account() {
           </aside>
 
           <div className="flex-1">
-            <Tabs defaultValue="orders" className="w-full">
-              <TabsContent value="profile" className="mt-0">
-                <Card className="bg-card/30 border-white/10">
-                  <CardHeader>
-                    <CardTitle className="font-serif">Profile Information</CardTitle>
-                    <CardDescription>Update your personal account details.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-6" onSubmit={(e) => {
-                      e.preventDefault();
-                      toast({ title: "Profile Updated", description: "Your changes have been saved." });
-                    }}>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Full Name</Label>
-                          <Input id="name" defaultValue={user?.name} className="bg-background/50 border-white/10" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input id="email" defaultValue={user?.email} disabled className="bg-background/20 border-white/5 cursor-not-allowed opacity-50" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input id="phone" placeholder="+91 98765 43210" className="bg-background/50 border-white/10" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Membership Tier</Label>
-                          <div className="h-10 px-3 flex items-center bg-primary/10 border border-primary/20 text-primary rounded-md font-serif italic">
-                            Verified Circle Member
-                          </div>
+            {activeTab === "profile" && (
+              <Card className="bg-card/30 border-white/10">
+                <CardHeader>
+                  <CardTitle className="font-serif">Profile Information</CardTitle>
+                  <CardDescription>Update your personal account details.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form className="space-y-6" onSubmit={(e) => {
+                    e.preventDefault();
+                    toast({ title: "Profile Updated", description: "Your changes have been saved." });
+                  }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input id="name" defaultValue={user?.name} className="bg-background/50 border-white/10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input id="email" defaultValue={user?.email} disabled className="bg-background/20 border-white/5 cursor-not-allowed opacity-50" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input id="phone" placeholder="+91 98765 43210" className="bg-background/50 border-white/10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Membership Tier</Label>
+                        <div className="h-10 px-3 flex items-center bg-primary/10 border border-primary/20 text-primary rounded-md font-serif italic">
+                          Verified Circle Member
                         </div>
                       </div>
-                      <Button type="submit" className="bg-primary text-black hover:bg-primary/90">
-                        Save Changes
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </div>
+                    <Button type="submit" className="bg-primary text-black hover:bg-primary/90">
+                      Save Changes
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
 
-              <TabsContent value="orders" className="mt-0">
+            {activeTab === "orders" && (
+              <div>
                 <h1 className="text-3xl font-serif font-bold mb-8">My Orders</h1>
                 <div className="space-y-6">
                   {ordersLoading ? (
@@ -287,24 +298,24 @@ export default function Account() {
                     </div>
                   )}
                 </div>
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="addresses" className="mt-0">
-                <Card className="bg-card/30 border-white/10">
-                  <CardHeader>
-                    <CardTitle className="font-serif">Saved Addresses</CardTitle>
-                    <CardDescription>Manage your delivery locations.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12">
-                      <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                      <p className="text-muted-foreground">No saved addresses found.</p>
-                      <Button variant="outline" className="mt-4 border-white/10">Add New Address</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+            {activeTab === "addresses" && (
+              <Card className="bg-card/30 border-white/10">
+                <CardHeader>
+                  <CardTitle className="font-serif">Saved Addresses</CardTitle>
+                  <CardDescription>Manage your delivery locations.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12">
+                    <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                    <p className="text-muted-foreground">No saved addresses found.</p>
+                    <Button variant="outline" className="mt-4 border-white/10">Add New Address</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

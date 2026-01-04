@@ -88,6 +88,20 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/products/:id", async (req, res) => {
+    try {
+      const isAdmin = req.query.adminEmail === "zixshankhan@gmail.com";
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      const success = await deleteProduct(parseInt(req.params.id));
+      res.json({ success });
+    } catch (error) {
+      console.error("Delete Error:", error);
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
   app.post("/api/upload", upload.single("image"), async (req: any, res) => {
     try {
       if (!req.file) {

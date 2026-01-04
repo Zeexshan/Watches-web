@@ -3,6 +3,7 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,6 +122,34 @@ export default function AdminDashboard() {
     },
   });
 
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      const res = await fetch(`/api/products/${productId}?adminEmail=${user?.email}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({ title: "Product Deleted", description: "Item removed from inventory." });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const res = await fetch(`/api/orders/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({ title: "Status Updated", description: "Order status has been updated." });
+    },
+  });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -174,7 +203,17 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Input id="category" name="category" required className="bg-background/50 border-white/10" />
+                    <Select name="category" required defaultValue="Watches">
+                      <SelectTrigger className="bg-background/50 border-white/10">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-white/10">
+                        <SelectItem value="Watches">Watches</SelectItem>
+                        <SelectItem value="Belts">Belts</SelectItem>
+                        <SelectItem value="Sunglasses">Sunglasses</SelectItem>
+                        <SelectItem value="Attar">Attar</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -348,7 +387,21 @@ export default function AdminDashboard() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="text-xs">Update Status</Button>
+                        <Select 
+                          defaultValue={order.status} 
+                          onValueChange={(val) => updateStatusMutation.mutate({ id: order.id, status: val })}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs bg-white/5 border-white/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border-white/10">
+                            <SelectItem value="Processing">Processing</SelectItem>
+                            <SelectItem value="Shipped">Shipped</SelectItem>
+                            <SelectItem value="Delivered">Delivered</SelectItem>
+                            <SelectItem value="Cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -378,6 +431,20 @@ export default function AdminDashboard() {
                       <TableCell>{product.category}</TableCell>
                       <TableCell>₹{product.price.toLocaleString('en-IN')}</TableCell>
                       <TableCell>{product.variants?.[0]?.stock || 0}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to delete this product?")) {
+                              deleteProductMutation.mutate(product.id);
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4 rotate-45" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

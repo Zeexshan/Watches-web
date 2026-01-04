@@ -1,0 +1,391 @@
+**Role & Context:**
+Act as a Senior Full-Stack Engineer implementing final polish and bug fixes for the "Circle Luxury" e-commerce application. We are addressing four specific UI/UX issues that prevent the application from being production-ready.
+
+**CRITICAL CONSTRAINT:**
+The Google Sheets connection via `credentials.json` is working and must not be modified. Only update component logic, routing, and API endpoints.
+
+---
+
+## **ISSUE 1: Custom 404 Page with Watch Dial Design**
+
+**Current State:**
+Generic text-only 404 error page that doesn't match the luxury brand aesthetic.
+
+**Required Design:**
+Create a visually striking 404 page that incorporates the luxury watch theme.
+
+### **Visual Layout Specifications:**
+
+*File: `client/src/pages/not-found.tsx` (or `NotFound.tsx`)*
+
+**Hero Section - "404" Display:**
+
+Create a horizontal layout where the middle "0" is replaced with a watch dial image:
+
+*Structure:*
+- Large "4" (left side)
+- Watch dial image (center, replacing the "0")
+- Large "4" (right side)
+
+*Implementation Guidance:*
+- Use flexbox row layout with center alignment
+- "4" characters: Use large display font (8rem or similar), luxury serif font
+- Watch dial image specifications:
+  - Source: `/attached_assets/watch1.png` (or your watch product image)
+  - Size: Approximately 128px × 128px (w-32 h-32)
+  - Add subtle rotation animation: `animate-spin-slow` (slow continuous rotation to mimic a ticking watch)
+  - Ensure image is circular or appears as a watch face
+- Maintain proper spacing between elements
+- Center the entire "4-watch-4" composition on the page
+
+**Tagline:**
+Below the 404 display, add a watch-themed message:
+- Text: "Lost in time! This page is not ticking" or similar luxury watch pun
+- Font: Elegant serif font, smaller size
+- Color: Muted gold or light gray for sophistication
+
+**Call-to-Action Button:**
+- Text: "Back to Homepage" or "Return to Time" (watch theme)
+- Style: Primary luxury button (gold border, elegant hover effect)
+- Action: Navigate to "/" route
+
+**Page Styling:**
+- Background: Dark luxury background (black or deep navy) matching site theme
+- Full viewport height centering
+- Ensure mobile responsiveness (stack vertically on small screens if needed)
+- Add subtle animations (fade-in on load)
+
+**Additional Elements:**
+- Maintain header/navigation if present on other pages
+- Consider adding footer for consistency
+- Ensure the page feels intentional and branded, not like an error
+
+---
+
+## **ISSUE 2: Account Page Tab Navigation Bug**
+
+**Current Problem:**
+Tab navigation in Account page doesn't work correctly. Clicking "Profile" or "Addresses" tabs continues to display the Orders list instead of switching content.
+
+*File: `client/src/pages/Account.tsx`*
+
+### **Root Cause Analysis:**
+
+Likely issues to investigate:
+- `activeTab` state not updating on tab click
+- Conditional rendering logic incorrect or missing
+- All tab content rendering simultaneously (z-index/display issues)
+- Tab click handlers not properly wired
+
+### **Required Fix - Proper Tab Switching:**
+
+**State Management:**
+- Ensure `activeTab` state exists and defaults to appropriate tab (e.g., "orders")
+- Tab buttons properly update state: `onClick={() => setActiveTab('profile')}`
+- State updates trigger re-render
+
+**Conditional Rendering Logic:**
+
+Implement proper conditional display for each tab:
+
+*Orders Tab Content:*
+- Display condition: `activeTab === 'orders'`
+- Show orders list fetched from API
+- Hide this section when other tabs are active
+
+*Profile Tab Content:*
+- Display condition: `activeTab === 'profile'`
+- Show profile information form with fields:
+  - Full Name (pre-filled from user data)
+  - Email (read-only, displays current user email)
+  - Phone Number (editable)
+  - Save Profile button (can console log for now or wire to API)
+- Hide this section when other tabs are active
+
+*Addresses Tab Content:*
+- Display condition: `activeTab === 'addresses'`
+- Show list of saved addresses if they exist
+- Empty state: Display "No saved addresses yet" with "Add New Address" button
+- Each address shows: Name, full address, phone, edit/delete options
+- Hide this section when other tabs are active
+
+**Implementation Pattern:**
+
+Use one of these approaches:
+- JSX conditional rendering: `{activeTab === 'orders' && <OrdersList />}`
+- Switch statement returning appropriate component
+- Early return pattern for cleaner code
+
+**Tab Button Styling:**
+- Active tab should have visual indicator (underline, bold, different color)
+- Inactive tabs should be muted/grayed
+- Ensure clear visual feedback of which tab is selected
+
+**Testing Requirements:**
+- Click each tab and verify correct content displays
+- Verify other tab content is completely hidden (not just opacity)
+- Check that data persists when switching between tabs (don't lose form inputs)
+
+---
+
+## **ISSUE 3: Activate Admin Action Buttons (Connect to Real APIs)**
+
+**Current Problem:**
+Admin Dashboard has UI buttons for deleting products and updating order status, but they only console log actions without making actual changes to the database.
+
+### **Backend API Implementation:**
+
+*File: `server/routes.ts`*
+
+**Endpoint 1: Delete Product**
+
+Create: `DELETE /api/products/:id`
+
+*Purpose:* Remove a product from the Products sheet
+
+*Requirements:*
+- Extract product ID from URL parameter
+- Locate the product row in Google Sheets Products tab
+- Delete the row from the sheet
+- Return success confirmation or error
+
+*Response Format:*
+```
+Success: { success: true, message: "Product deleted", productId }
+Error: { success: false, error: "Error message" }
+```
+
+*Error Handling:*
+- Product ID not found (404)
+- Invalid product ID format
+- Google Sheets API errors
+- Product has existing orders (optional: prevent deletion)
+
+**Endpoint 2: Update Order Status**
+
+Create: `PUT /api/orders/:id/status`
+
+*Purpose:* Update the status of an order
+
+*Request Body:*
+```
+{ status: "Processing" | "Shipped" | "Delivered" }
+```
+
+*Requirements:*
+- Extract order ID from URL parameter
+- Extract new status from request body
+- Validate status value (only allow valid statuses)
+- Locate order row in Google Sheets Orders tab
+- Update the status column
+- Return updated order data
+
+*Response Format:*
+```
+Success: { success: true, order: updatedOrderObject }
+Error: { success: false, error: "Error message" }
+```
+
+*Validation:*
+- Status must be one of allowed values
+- Order ID must exist
+- Consider status transition rules (can't go from Delivered back to Processing)
+
+*File: `server/db.ts`*
+
+**Add Helper Functions:**
+
+**Function: `deleteProduct(productId)`**
+- Query Products sheet for matching ID
+- Remove row from sheet
+- Return confirmation
+
+**Function: `updateOrderStatus(orderId, newStatus)`**
+- Query Orders sheet for matching ID
+- Update status column value
+- Return updated order object
+
+### **Frontend Integration:**
+
+*File: `client/src/pages/AdminDashboard.tsx`*
+
+**Wire Delete Product Button:**
+
+*Current:* Trash icon logs to console
+*Required:*
+
+- Add click handler that calls `DELETE /api/products/${productId}`
+- Show confirmation dialog before deletion: "Are you sure you want to delete this product?"
+- On user confirmation:
+  - Show loading state on button
+  - Make DELETE API call
+  - On success: Remove product from UI state/list, show success toast
+  - On error: Display error message, keep product in list
+- Handle loading and error states appropriately
+
+**Wire Update Order Status Dropdown:**
+
+*Current:* Dropdown logs to console
+*Required:*
+
+- Add onChange handler to status select/dropdown
+- When status changes:
+  - Show loading indicator on the dropdown
+  - Call `PUT /api/orders/${orderId}/status` with new status
+  - On success: Update order status in UI state, show success toast
+  - On error: Revert dropdown to previous status, show error message
+- Optimistically update UI for better UX (update immediately, revert on error)
+- Disable dropdown while request is pending
+
+**User Feedback:**
+- Success messages: "Product deleted successfully", "Order status updated"
+- Error messages: "Failed to delete product", "Could not update status"
+- Use toast notifications or inline messages
+- Provide clear feedback for all user actions
+
+---
+
+## **ISSUE 4: Category Input Standardization**
+
+**Current Problem:**
+Add Product form uses free-text input for Category field, leading to inconsistent data (typos, different capitalizations, plural vs singular).
+
+*File: `client/src/pages/AdminDashboard.tsx`*
+
+### **Required Change:**
+
+**Replace Text Input with Dropdown:**
+
+*Current Implementation:*
+```
+Text input field where admin types category name
+Issues: "watch" vs "Watch" vs "Watches", "belt" vs "Belts"
+```
+
+*Required Implementation:*
+
+**Category Dropdown/Select:**
+- Use HTML `<select>` element or shadcn Select component
+- Replace the current `<Input type="text" name="category" />` 
+
+**Dropdown Options:**
+Predefined categories (match your existing product categories):
+- "Watches"
+- "Belts"
+- "Sunglasses"
+- "Attar"
+
+*Additional Considerations:*
+- Set default selection (e.g., "Watches" or placeholder "Select a category")
+- Make field required (prevent submission without selection)
+- Style dropdown to match luxury brand aesthetic
+- Consider adding "Other" option with conditional text input if needed
+- Ensure selected value is properly captured in form submission
+
+**Data Consistency Benefits:**
+- Eliminates typos in category names
+- Ensures consistent filtering and search
+- Makes category-based queries reliable
+- Improves product organization
+
+**Validation:**
+- Ensure a category is selected before allowing product creation
+- Display error message if form submitted without category selection
+
+---
+
+## **IMPLEMENTATION PRIORITY ORDER**
+
+Follow this sequence to minimize issues:
+
+**Priority 1 - Backend Foundation:**
+1. Implement `DELETE /api/products/:id` endpoint
+2. Add `deleteProduct` function to `db.ts`
+3. Test product deletion with API client (Postman/Insomnia)
+4. Implement `PUT /api/orders/:id/status` endpoint
+5. Add `updateOrderStatus` function to `db.ts`
+6. Test status update with API client
+
+**Priority 2 - Admin Dashboard Connectivity:**
+7. Wire Delete button to DELETE endpoint in AdminDashboard
+8. Add confirmation dialog before deletion
+9. Implement error handling and success feedback
+10. Wire Status dropdown to PUT endpoint
+11. Test complete flow: Change status → API call → UI update
+12. Verify Google Sheets reflects changes
+
+**Priority 3 - Account Page Fix:**
+13. Debug `activeTab` state logic in Account.tsx
+14. Implement proper conditional rendering for each tab
+15. Build Profile tab content with form
+16. Build Addresses tab content with list
+17. Test tab switching thoroughly
+18. Verify data persists when switching tabs
+
+**Priority 4 - Form Improvement:**
+19. Replace Category text input with Select dropdown
+20. Add predefined category options
+21. Test product creation with dropdown
+22. Verify category consistency in database
+
+**Priority 5 - Visual Polish:**
+23. Create custom 404 page layout
+24. Implement "4-watch-4" design
+25. Add watch dial image with animation
+26. Style with luxury theme
+27. Test 404 page on mobile devices
+
+---
+
+## **TESTING CHECKLIST**
+
+Before considering fixes complete, verify:
+
+**404 Page:**
+- [ ] Page displays "4-watch-4" layout correctly
+- [ ] Watch dial image loads and displays properly
+- [ ] Slow rotation animation works smoothly
+- [ ] "Back to Homepage" button navigates correctly
+- [ ] Page matches luxury brand aesthetic
+- [ ] Mobile responsive (elements stack or resize appropriately)
+- [ ] Typography uses luxury serif font
+
+**Account Page Tabs:**
+- [ ] Clicking "Orders" tab shows orders list only
+- [ ] Clicking "Profile" tab shows profile form only
+- [ ] Clicking "Addresses" tab shows addresses list only
+- [ ] Only one tab content visible at a time
+- [ ] Active tab has clear visual indicator
+- [ ] Profile form displays current user data
+- [ ] Addresses show saved data or empty state
+
+**Admin Actions:**
+- [ ] Delete button shows confirmation dialog
+- [ ] Product deletion removes from Google Sheets
+- [ ] Product deletion updates UI immediately
+- [ ] Delete errors are handled gracefully
+- [ ] Status dropdown updates order in Google Sheets
+- [ ] Status change reflects in UI instantly
+- [ ] Status update errors revert dropdown
+- [ ] Success/error messages display clearly
+
+**Category Dropdown:**
+- [ ] Dropdown displays all categories
+- [ ] Selection properly captured in form state
+- [ ] New products save with correct category
+- [ ] Required validation works (can't skip selection)
+- [ ] Dropdown styling matches form aesthetic
+
+**Overall:**
+- [ ] No console errors in browser
+- [ ] Google Sheets connection remains stable
+- [ ] All changes properly saved to database
+- [ ] Mobile responsiveness maintained
+- [ ] Loading states work correctly
+- [ ] Error handling is user-friendly
+
+---
+the existing addProduct function in db.ts doesn't need changes (it shouldn't, but it's good to be safe)
+
+**START BY:** Implementing the backend API endpoints for delete and status update, testing them in isolation with an API client, then connecting the frontend buttons to these working endpoints. This ensures the foundation is solid before addressing the UI issues.
+

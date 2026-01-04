@@ -205,6 +205,7 @@ export async function addOrder(order: any) {
     payment_method: "COD",
     shipping_fee_paid: "TRUE",
     product_amount_due: order.total,
+    status: "Processing",
     date: new Date().toISOString(),
   });
 }

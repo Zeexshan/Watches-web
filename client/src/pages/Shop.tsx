@@ -96,7 +96,7 @@ export default function Shop() {
     <Layout>
       <div className="bg-card/30 py-12 mb-8">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-serif font-bold text-white mb-2">The Collection</h1>
+          <h1 className="text-4xl font-serif font-bold text-white mb-2">Choicefull Accessories</h1>
           <p className="text-muted-foreground">Discover our exclusive range of luxury items.</p>
         </div>
       </div>

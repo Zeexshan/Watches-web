@@ -212,101 +212,103 @@ export default function AdminDashboard() {
               <DialogHeader>
                 <DialogTitle className="font-serif text-2xl">Add New Product</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddProduct} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Product Name</Label>
-                    <Input id="name" name="name" required className="bg-background/50 border-white/10" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select name="category" required defaultValue="Watches">
-                      <SelectTrigger className="bg-background/50 border-white/10">
-                        <SelectValue placeholder="Select Category" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card border-white/10">
-                        <SelectItem value="Watches">Watches</SelectItem>
-                        <SelectItem value="Belts">Belts</SelectItem>
-                        <SelectItem value="Sunglasses">Sunglasses</SelectItem>
-                        <SelectItem value="Attar">Attar</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" name="description" required className="bg-background/50 border-white/10 min-h-[100px]" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input id="price" name="price" type="number" required className="bg-background/50 border-white/10" />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Label>Product Variants</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="h-8 border-white/10">
-                      <Plus className="h-3 w-3 mr-1" /> Add Variant
-                    </Button>
-                  </div>
-                  {variants.map((v, i) => (
-                    <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-sm space-y-4">
-                      <div className="flex gap-4">
-                        <div className="flex-1 space-y-2">
-                          <Label className="text-xs">Color/Name</Label>
-                          <Input value={v.color} onChange={(e) => updateVariant(i, "color", e.target.value)} placeholder="Gold" className="bg-background/50 border-white/10 h-8" />
-                        </div>
-                        <div className="w-24 space-y-2">
-                          <Label className="text-xs">Stock</Label>
-                          <Input type="number" value={v.stock} onChange={(e) => updateVariant(i, "stock", parseInt(e.target.value))} className="bg-background/50 border-white/10 h-8" />
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeVariant(i)} className="mt-6 h-8 w-8 text-red-400">
-                          <Plus className="h-4 w-4 rotate-45" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <Label className="text-xs block mb-2">Variant Image</Label>
-                          <div className="flex items-center gap-3">
-                            <Button type="button" variant="outline" size="sm" className="h-8 border-white/10 relative overflow-hidden">
-                              <Upload className="h-3 w-3 mr-2" /> Upload
-                              <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={(e) => e.target.files?.[0] && handleVariantImageUpload(i, e.target.files[0])} />
-                            </Button>
-                            {v.image && <img src={v.image} className="h-8 w-8 object-contain bg-black/20" />}
-                          </div>
-                        </div>
-                      </div>
+              <div className="max-h-[80vh] overflow-y-auto pr-4 scroll-smooth">
+                <form onSubmit={handleAddProduct} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Product Name</Label>
+                      <Input id="name" name="name" required className="bg-background/50 border-white/10" />
                     </div>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <Label>Product Image</Label>
-                  <div className="flex items-center gap-4">
-                    <Button type="button" variant="outline" className="border-white/10 w-full relative h-24 border-dashed" asChild>
-                      <label className="cursor-pointer">
-                        {isUploading ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : uploadedUrl ? (
-                          <img src={uploadedUrl} className="h-20 object-contain" />
-                        ) : (
-                          <div className="text-center">
-                            <Upload className="mx-auto h-6 w-6 mb-1 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Click to upload</span>
-                          </div>
-                        )}
-                        <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                      </label>
-                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Select name="category" required defaultValue="Watches">
+                        <SelectTrigger className="bg-background/50 border-white/10">
+                          <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/10">
+                          <SelectItem value="Watches">Watches</SelectItem>
+                          <SelectItem value="Belts">Belts</SelectItem>
+                          <SelectItem value="Sunglasses">Sunglasses</SelectItem>
+                          <SelectItem value="Attar">Attar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  {uploadedUrl && <p className="text-xs text-primary truncate">{uploadedUrl}</p>}
-                </div>
-                <Button type="submit" className="w-full bg-primary text-black font-bold uppercase" disabled={addProductMutation.isPending}>
-                  {addProductMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Product
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea id="description" name="description" required className="bg-background/50 border-white/10 min-h-[100px]" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Price (₹)</Label>
+                      <Input id="price" name="price" type="number" required className="bg-background/50 border-white/10" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <Label>Product Variants</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addVariant} className="h-8 border-white/10">
+                        <Plus className="h-3 w-3 mr-1" /> Add Variant
+                      </Button>
+                    </div>
+                    {variants.map((v, i) => (
+                      <div key={i} className="p-4 bg-white/5 border border-white/10 rounded-sm space-y-4">
+                        <div className="flex gap-4">
+                          <div className="flex-1 space-y-2">
+                            <Label className="text-xs">Color/Name</Label>
+                            <Input value={v.color} onChange={(e) => updateVariant(i, "color", e.target.value)} placeholder="Gold" className="bg-background/50 border-white/10 h-8" />
+                          </div>
+                          <div className="w-24 space-y-2">
+                            <Label className="text-xs">Stock</Label>
+                            <Input type="number" value={v.stock} onChange={(e) => updateVariant(i, "stock", parseInt(e.target.value))} className="bg-background/50 border-white/10 h-8" />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeVariant(i)} className="mt-6 h-8 w-8 text-red-400">
+                            <Plus className="h-4 w-4 rotate-45" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <Label className="text-xs block mb-2">Variant Image</Label>
+                            <div className="flex items-center gap-3">
+                              <Button type="button" variant="outline" size="sm" className="h-8 border-white/10 relative overflow-hidden">
+                                <Upload className="h-3 w-3 mr-2" /> Upload
+                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={(e) => e.target.files?.[0] && handleVariantImageUpload(i, e.target.files[0])} />
+                              </Button>
+                              {v.image && <img src={v.image} className="h-8 w-8 object-contain bg-black/20" />}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Product Image</Label>
+                    <div className="flex items-center gap-4">
+                      <Button type="button" variant="outline" className="border-white/10 w-full relative h-24 border-dashed" asChild>
+                        <label className="cursor-pointer">
+                          {isUploading ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : uploadedUrl ? (
+                            <img src={uploadedUrl} className="h-20 object-contain" />
+                          ) : (
+                            <div className="text-center">
+                              <Upload className="mx-auto h-6 w-6 mb-1 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Click to upload</span>
+                            </div>
+                          )}
+                          <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                        </label>
+                      </Button>
+                    </div>
+                    {uploadedUrl && <p className="text-xs text-primary truncate">{uploadedUrl}</p>}
+                  </div>
+                  <Button type="submit" className="w-full bg-primary text-black font-bold uppercase sticky bottom-0 z-10" disabled={addProductMutation.isPending}>
+                    {addProductMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Product
+                  </Button>
+                </form>
+              </div>
             </DialogContent>
           </Dialog>
         </header>

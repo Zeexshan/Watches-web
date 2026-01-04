@@ -1,0 +1,463 @@
+Act as a Senior Full-Stack Engineer applying final polish and fixing critical bugs in the "Circle Luxury" e-commerce application. We are addressing branding updates, UI layout issues, and a critical database synchronization bug that prevents order status updates from persisting.
+
+**CRITICAL CONSTRAINT:**
+The Google Sheets connection via `credentials.json` is working and must not be modified. Only fix component logic, UI styles, and database write operations.
+
+---
+
+## **ISSUE 1: Rebrand Navigation Link**
+
+**Current State:**
+Navigation menu has a link labeled "Shop"
+
+**Required Change:**
+Update to client's preferred branding: "Choicefull Accessories"
+
+### **Implementation:**
+
+*Files to Update:*
+
+**File 1: `client/src/components/layout/Layout.tsx` (or Header/Navbar component)**
+- Locate the navigation links section
+- Find the link with text "Shop" or label "Shop"
+- Change the display text from "Shop" to "Choicefull Accessories"
+- Keep the route path the same (still navigates to `/shop` or whatever the current route is)
+- Ensure mobile navigation menu also reflects this change
+
+**File 2: `client/src/pages/Shop.tsx`**
+- Update the page heading/title if it displays "Shop"
+- Change to "Choicefull Accessories" for consistency
+- Update any breadcrumbs that might show "Shop"
+
+**File 3: Any other navigation components**
+- Check for footer links that might reference "Shop"
+- Update sidebar navigation if applicable
+- Verify mobile menu shows correct label
+
+*Verification:*
+- Desktop navigation displays "Choicefull Accessories"
+- Mobile menu displays "Choicefull Accessories"
+- Page heading matches navigation label
+- Route functionality remains unchanged
+
+---
+
+## **ISSUE 2: Edit Product Modal Layout Bug**
+
+**Current Problem:**
+The Edit Product form in the Admin Dashboard has vertical overflow issues. The modal/dialog is too tall for the viewport, causing:
+- Form fields cut off at the bottom
+- Unable to scroll to see all fields
+- Save/Cancel buttons hidden below viewport
+- Poor user experience on laptop screens and smaller displays
+
+*File: `client/src/pages/AdminDashboard.tsx`*
+
+### **Root Cause:**
+The Edit Product modal content is not constrained to viewport height and lacks a scrollable container.
+
+### **Required Fix:**
+
+**Step 1 - Make Modal Content Scrollable:**
+
+Locate the Edit Product modal/dialog component (likely using shadcn Dialog or Sheet component).
+
+Find the content wrapper (probably `DialogContent` or `SheetContent`).
+
+**Add Scrollable Container:**
+
+Wrap the form fields inside a scrollable div with these properties:
+- Maximum height: 80% of viewport height (`max-h-[80vh]`)
+- Enable vertical scrolling: `overflow-y-auto`
+- Add right padding for scrollbar: `pr-4` (prevents content from hiding behind scrollbar)
+- Smooth scrolling behavior: Consider adding `scroll-smooth`
+
+*Implementation Pattern:*
+```
+Structure (do not copy exactly, adapt to your component):
+<DialogContent>
+  <DialogHeader>
+    <DialogTitle>Edit Product</DialogTitle>
+  </DialogHeader>
+  
+  <div className="max-h-[80vh] overflow-y-auto pr-4">
+    {/* All form fields go here */}
+    {/* Name, Description, Price, Stock, Category, Variants, etc. */}
+  </div>
+  
+  <DialogFooter>
+    {/* Save and Cancel buttons - these stay fixed at bottom */}
+  </DialogFooter>
+</DialogContent>
+```
+
+**Step 2 - Keep Action Buttons Accessible:**
+
+Ensure Save/Cancel buttons remain visible:
+- Place buttons in `DialogFooter` or outside the scrollable area
+- Consider making footer sticky: `sticky bottom-0 bg-background`
+- Add top border or shadow to footer for visual separation from scrollable content
+
+**Step 3 - Responsive Adjustments:**
+
+*For Different Screen Sizes:*
+- Desktop (1024px+): `max-h-[80vh]`
+- Tablet (768-1023px): `max-h-[75vh]`
+- Mobile (below 768px): `max-h-[85vh]` (more screen space needed)
+
+Use responsive classes: `max-h-[85vh] md:max-h-[75vh] lg:max-h-[80vh]`
+
+**Step 4 - Improve Scrolling UX:**
+
+*Visual Enhancements:*
+- Add fade effect at top/bottom to indicate more content
+- Style scrollbar for luxury aesthetic (webkit scrollbar styles)
+- Ensure adequate padding at bottom of scrollable area
+- Add smooth scroll behavior
+
+*Example Scrollbar Styling (optional):*
+Add custom CSS or Tailwind utilities for elegant scrollbar that matches dark theme.
+
+### **Testing Requirements:**
+
+Test on various screen sizes:
+- [ ] 1920×1080 desktop - all fields visible with comfortable spacing
+- [ ] 1366×768 laptop - modal scrolls smoothly, no content cut off
+- [ ] 1024×768 tablet - buttons remain accessible
+- [ ] Mobile portrait - form is usable with proper scrolling
+
+Verify all form sections are accessible:
+- [ ] Can scroll to see all input fields
+- [ ] Variant builder section fully accessible
+- [ ] Image upload sections visible
+- [ ] Save/Cancel buttons always visible or easily accessible
+- [ ] No horizontal overflow
+
+---
+
+## **ISSUE 3: Order Status Updates Not Persisting to Database (CRITICAL BUG)**
+
+**Current Problem:**
+Admin can change order status in the dashboard UI, and the interface updates successfully, BUT the changes do NOT save to Google Sheets. When the page refreshes or when viewing orders later, the status reverts to the old value. Additionally, newly created orders may not have an initial status set.
+
+This is a **critical data integrity issue** that makes order management unreliable.
+
+### **Problem Analysis:**
+
+*Likely Causes:*
+1. `updateOrderStatus` function modifies row data but doesn't call `.save()` method
+2. New orders created without explicit `status` field
+3. Status update endpoint doesn't properly await database operation
+
+### **Backend Fix - Part 1: New Order Creation:**
+
+*File: `server/db.ts`*
+
+**Update `addOrder` function:**
+
+*Current Issue:* New orders might not have initial status
+
+*Required Fix:*
+- When creating a new order object, explicitly set `status: "Processing"`
+- Ensure this field is included when writing to Google Sheets
+- Verify the Orders sheet has a `status` column
+
+*Implementation:*
+```
+Function signature example (adapt to your structure):
+addOrder(orderData) {
+  const orderWithStatus = {
+    ...orderData,
+    order_id: generateOrderId(),
+    status: orderData.status || "Processing", // Default to "Processing"
+    created_at: new Date().toISOString(),
+    // ... other fields
+  };
+  
+  // Write to Google Sheets
+  // Return order object
+}
+```
+
+### **Backend Fix - Part 2: Status Update Persistence:**
+
+*File: `server/db.ts`*
+
+**Update `updateOrderStatus` function - CRITICAL FIX:**
+
+*Current Broken Pattern (likely):*
+```
+The function probably does something like:
+- Find order row
+- Modify row data in memory: row.status = newStatus
+- Return success
+BUT NEVER SAVES TO GOOGLE SHEETS
+```
+
+*Correct Implementation Pattern:*
+
+```
+Required logic flow (adapt to your actual code):
+
+export async function updateOrderStatus(orderId: string, newStatus: string) {
+  // 1. Initialize sheets connection
+  await initSheets();
+  
+  // 2. Get Orders sheet reference
+  const sheet = doc.sheetsByTitle['Orders'];
+  
+  // 3. Fetch all rows
+  const rows = await sheet.getRows();
+  
+  // 4. Find specific order by ID
+  const orderRow = rows.find(row => row.get('order_id') === orderId);
+  
+  // 5. Validate order exists
+  if (!orderRow) {
+    throw new Error(`Order with ID ${orderId} not found`);
+  }
+  
+  // 6. Update the status field
+  orderRow.set('status', newStatus);
+  
+  // 7. ⚠️ CRITICAL: Save changes to Google Sheets
+  await orderRow.save(); // ← THIS LINE IS PROBABLY MISSING!
+  
+  // 8. Return success with updated data
+  return {
+    success: true,
+    order: {
+      order_id: orderRow.get('order_id'),
+      status: orderRow.get('status'),
+      // ... other fields you want to return
+    }
+  };
+}
+```
+
+**Key Points:**
+
+*The `.save()` Method:*
+- `google-spreadsheet` library requires explicit `.save()` call
+- Modifying row data with `.set()` only changes in-memory object
+- Changes are NOT persisted until `.save()` is called
+- `.save()` returns a Promise - must be awaited
+
+*Error Handling:*
+- Catch Google Sheets API errors (network, permissions, quota)
+- Validate status value before saving (only allow valid statuses)
+- Handle case where order doesn't exist
+- Return meaningful error messages
+
+### **Backend Fix - Part 3: API Endpoint Verification:**
+
+*File: `server/routes.ts`*
+
+**Verify `PUT /api/orders/:id/status` endpoint:**
+
+*Requirements:*
+- Endpoint properly extracts `orderId` from URL params
+- Extracts `status` from request body
+- Validates status value (must be "Processing", "Shipped", or "Delivered")
+- Calls the corrected `updateOrderStatus` function
+- Properly awaits the database operation
+- Returns appropriate response
+
+*Endpoint Implementation Pattern:*
+```
+Example structure (adapt to your code):
+
+app.put('/api/orders/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    // Validate status
+    const validStatuses = ['Processing', 'Shipped', 'Delivered'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid status value' 
+      });
+    }
+    
+    // Update in database (with proper .save() now)
+    const result = await updateOrderStatus(id, status);
+    
+    // Return success
+    res.json(result);
+    
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+```
+
+### **Frontend Verification:**
+
+*File: `client/src/pages/AdminDashboard.tsx`*
+
+**Ensure proper API integration:**
+
+*Status Dropdown Handler Requirements:*
+- Calls the correct endpoint: `PUT /api/orders/${orderId}/status`
+- Sends proper request body: `{ status: newStatus }`
+- Properly handles async operation (await or .then)
+- Updates UI only after successful API response (or optimistically with rollback)
+- Displays error message if update fails
+- Shows success confirmation when saved
+
+*Recommended Flow:*
+```
+Pattern (adapt to your code):
+
+const handleStatusChange = async (orderId, newStatus) => {
+  try {
+    // Show loading state
+    setIsUpdating(orderId);
+    
+    // Call API
+    const response = await fetch(`/api/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Update UI state
+      updateOrderInList(orderId, newStatus);
+      // Show success message
+      toast.success('Order status updated');
+    } else {
+      // Show error
+      toast.error(data.error || 'Failed to update status');
+    }
+    
+  } catch (error) {
+    console.error('Status update error:', error);
+    toast.error('Failed to update order status');
+  } finally {
+    setIsUpdating(null);
+  }
+};
+```
+
+---
+
+## **TESTING & VERIFICATION**
+
+### **Critical Order Status Tests:**
+
+**Test 1 - New Order Creation:**
+1. Create a new order through checkout
+2. Verify order appears in Admin Dashboard with "Processing" status
+3. Check Google Sheets Orders tab directly - confirm status column shows "Processing"
+
+**Test 2 - Status Update Persistence:**
+1. In Admin Dashboard, change an order status from "Processing" to "Shipped"
+2. UI should update immediately
+3. Refresh the admin page - status should still be "Shipped"
+4. Check Google Sheets directly - confirm status is "Shipped"
+5. Fetch orders via API - confirm status is "Shipped"
+
+**Test 3 - Multiple Status Changes:**
+1. Change order: "Processing" → "Shipped" → "Delivered"
+2. Each change should persist
+3. Verify in Google Sheets after each change
+4. Test with multiple orders simultaneously
+
+**Test 4 - Error Scenarios:**
+1. Try to set invalid status value - should reject
+2. Try to update non-existent order - should show error
+3. Network failures should be handled gracefully
+4. Status should not change in UI if API call fails
+
+### **Edit Modal Tests:**
+
+- [ ] Open Edit Product modal on 1366×768 laptop screen
+- [ ] All form sections are accessible via scrolling
+- [ ] Variant builder is fully visible and usable
+- [ ] Can scroll smoothly without layout jumps
+- [ ] Save/Cancel buttons remain accessible
+- [ ] No content is cut off or hidden
+- [ ] Modal looks good on mobile devices
+
+### **Navigation Rebranding Tests:**
+
+- [ ] Desktop navigation shows "Choicefull Accessories"
+- [ ] Mobile menu shows "Choicefull Accessories"
+- [ ] Link still navigates to correct shop page
+- [ ] Page heading matches navigation label
+- [ ] No broken links or styling issues
+
+---
+
+## **IMPLEMENTATION PRIORITY ORDER**
+
+**PRIORITY 1 - Order Status Bug (CRITICAL - Data Integrity):**
+1. Update `addOrder` in `db.ts` to set initial status
+2. Fix `updateOrderStatus` in `db.ts` - add the missing `.save()` call
+3. Verify `PUT /api/orders/:id/status` endpoint in `routes.ts`
+4. Test status updates persist to Google Sheets
+5. Test multiple status changes
+6. Verify new orders have "Processing" status
+
+**PRIORITY 2 - Edit Modal Layout (User Experience):**
+7. Add scrollable container to Edit Product modal
+8. Set max-height with viewport units
+9. Ensure buttons remain accessible
+10. Test on various screen sizes
+11. Add scrollbar styling for luxury aesthetic
+
+**PRIORITY 3 - Navigation Rebranding (Polish):**
+12. Update navigation component label
+13. Update shop page heading
+14. Update mobile menu
+15. Verify all instances updated
+
+---
+
+## **DEBUGGING TIPS**
+
+**If Order Status Still Not Persisting:**
+
+*Check these specific issues:*
+1. Console log before and after `await orderRow.save()` to confirm it's being called
+2. Check Google Sheets API quota - may be rate limited
+3. Verify Orders sheet has proper write permissions
+4. Check for typos in column name: 'status' vs 'Status' (case sensitive)
+5. Ensure `initSheets()` is called before accessing sheets
+6. Check for race conditions (multiple rapid updates)
+
+*Add Debug Logging:*
+```
+console.log('Before save:', orderRow.get('status'));
+await orderRow.save();
+console.log('After save:', orderRow.get('status'));
+// Verify it saved by fetching again
+const verification = await sheet.getRows();
+const updatedRow = verification.find(r => r.get('order_id') === orderId);
+console.log('Verified in sheet:', updatedRow.get('status'));
+```
+
+**If Modal Still Overflowing:**
+1. Inspect element to verify `max-h-[80vh]` is applied
+2. Check if parent container has height restrictions
+3. Verify `overflow-y-auto` is not being overridden
+4. Check for conflicting CSS from other sources
+
+---
+
+**START BY:** Fixing the `updateOrderStatus` function by adding the missing `await orderRow.save()` line. This is the most critical bug affecting data integrity. Test it immediately by changing a status in the admin panel, then checking the Google Sheet directly to confirm persistence.
+
+---
+
+**NOTE ON DESIGN:** Based on the provided image, your existing design appears to have the luxury dark theme, hero section, collections, and overall layout already implemented well. This prompt focuses only on the three specific bugs mentioned without requiring design changes to those existing sections.
+
+---

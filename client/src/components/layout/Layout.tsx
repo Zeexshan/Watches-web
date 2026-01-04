@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     Home
                   </Link>
                   <Link href="/shop" className="text-xl font-medium hover:text-primary transition-colors">
-                    Shop
+                    Choicefull Accessories
                   </Link>
                   <Link href="/categories" className="text-xl font-medium hover:text-primary transition-colors">
                     Categories
@@ -58,7 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Home
             </Link>
             <Link href="/shop" className="text-sm uppercase tracking-widest hover:text-primary transition-colors duration-300">
-              Shop
+              Choicefull Accessories
             </Link>
             <Link href="/shop" className="text-sm uppercase tracking-widest hover:text-primary transition-colors duration-300">
               Categories

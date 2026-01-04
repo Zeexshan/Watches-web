@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
-import { getProducts, addOrder, addUser, loginUser, getOrders, addProduct, updateOrderStatus, deleteProduct } from "./db";
+import { getProducts, addOrder, addUser, loginUser, getOrders, addProduct, updateOrderStatus, deleteProduct, updateProduct, getUserAddresses, addUserAddress, updateUserAddress, deleteUserAddress } from "./db";
 
 import { v2 as cloudinary } from "cloudinary";
 
@@ -88,6 +88,20 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/products/:id", async (req, res) => {
+    try {
+      const isAdmin = req.body.adminEmail === "zixshankhan@gmail.com";
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      const product = await updateProduct(parseInt(req.params.id), req.body);
+      res.json({ success: true, product });
+    } catch (error) {
+      console.error("Update Product Error:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
   app.delete("/api/products/:id", async (req, res) => {
     try {
       const isAdmin = req.query.adminEmail === "zixshankhan@gmail.com";
@@ -167,6 +181,46 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Login Error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/user/addresses", async (req, res) => {
+    try {
+      const { email } = req.query;
+      const addresses = await getUserAddresses(email as string);
+      res.json({ success: true, addresses });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to fetch addresses" });
+    }
+  });
+
+  app.post("/api/user/addresses", async (req, res) => {
+    try {
+      const { email, ...addressData } = req.body;
+      const addresses = await addUserAddress(email, addressData);
+      res.json({ success: true, addresses });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to add address" });
+    }
+  });
+
+  app.put("/api/user/addresses/:addressId", async (req, res) => {
+    try {
+      const { email, ...updateData } = req.body;
+      const addresses = await updateUserAddress(email, req.params.addressId, updateData);
+      res.json({ success: true, addresses });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to update address" });
+    }
+  });
+
+  app.delete("/api/user/addresses/:addressId", async (req, res) => {
+    try {
+      const { email } = req.query;
+      const addresses = await deleteUserAddress(email as string, req.params.addressId);
+      res.json({ success: true, addresses });
+    } catch (error) {
+      res.status(500).json({ success: false, error: "Failed to delete address" });
     }
   });
 

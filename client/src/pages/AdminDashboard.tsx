@@ -22,9 +22,20 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [variants, setVariants] = useState([{ color: "", stock: 0, image: "" }]);
+
+  useEffect(() => {
+    if (editingProduct) {
+      setUploadedUrl(editingProduct.image);
+      setVariants(editingProduct.variants || []);
+    } else {
+      setUploadedUrl("");
+      setVariants([{ color: "", stock: 0, image: "" }]);
+    }
+  }, [editingProduct]);
 
   const isAdmin = user?.email === "zixshankhan@gmail.com";
 
@@ -107,8 +118,10 @@ export default function AdminDashboard() {
 
   const addProductMutation = useMutation({
     mutationFn: async (productData: any) => {
-      const res = await fetch("/api/products", {
-        method: "POST",
+      const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products";
+      const method = editingProduct ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...productData, adminEmail: user?.email }),
       });
@@ -116,8 +129,12 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      toast({ title: "Product Added", description: "New luxury timepiece added to collection." });
+      toast({ 
+        title: editingProduct ? "Product Updated" : "Product Added", 
+        description: editingProduct ? "Changes saved successfully." : "New luxury timepiece added to collection." 
+      });
       setIsAddModalOpen(false);
+      setEditingProduct(null);
       setUploadedUrl("");
     },
   });
@@ -432,6 +449,17 @@ export default function AdminDashboard() {
                       <TableCell>₹{product.price.toLocaleString('en-IN')}</TableCell>
                       <TableCell>{product.variants?.[0]?.stock || 0}</TableCell>
                       <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => {
+                            setEditingProduct(product);
+                            setIsAddModalOpen(true);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 

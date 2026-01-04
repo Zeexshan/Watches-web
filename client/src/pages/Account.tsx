@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Package, MapPin, LogOut, User as UserIcon } from "lucide-react";
+import { Package, MapPin, LogOut, User as UserIcon, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Account() {
   const { user, isLoggedIn, login, logout, isLoading } = useAuth();
@@ -87,6 +88,9 @@ export default function Account() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any>(null);
 
   useEffect(() => {
     if (isLoggedIn && user?.email) {
@@ -98,8 +102,54 @@ export default function Account() {
         })
         .catch(err => console.error("Error fetching orders:", err))
         .finally(() => setOrdersLoading(false));
+
+      fetch(`/api/user/addresses?email=${user.email}`)
+        .then(res => res.json())
+        .then(data => {
+          setAddresses(data.addresses || []);
+        });
     }
   }, [isLoggedIn, user?.email]);
+
+  const handleAddressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const addressData = Object.fromEntries(formData.entries());
+    
+    const url = editingAddress ? `/api/user/addresses/${editingAddress.id}` : "/api/user/addresses";
+    const method = editingAddress ? "PUT" : "POST";
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...addressData, email: user?.email, addressId: editingAddress?.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAddresses(data.addresses);
+        setIsAddressModalOpen(false);
+        setEditingAddress(null);
+        toast({ title: editingAddress ? "Address Updated" : "Address Added" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Failed to save address" });
+    }
+  };
+
+  const deleteAddress = async (id: string) => {
+    if (!window.confirm("Delete this address?")) return;
+    try {
+      const res = await fetch(`/api/user/addresses/${id}?email=${user?.email}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setAddresses(data.addresses);
+        toast({ title: "Address Deleted" });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Failed to delete" });
+    }
+  };
 
   if (isLoading) return null;
 
@@ -303,16 +353,92 @@ export default function Account() {
 
             {activeTab === "addresses" && (
               <Card className="bg-card/30 border-white/10">
-                <CardHeader>
-                  <CardTitle className="font-serif">Saved Addresses</CardTitle>
-                  <CardDescription>Manage your delivery locations.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="font-serif">Saved Addresses</CardTitle>
+                    <CardDescription>Manage your delivery locations.</CardDescription>
+                  </div>
+                  <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => setEditingAddress(null)} className="border-white/10">
+                        <Plus className="h-4 w-4 mr-2" /> Add New
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-white/10">
+                      <DialogHeader>
+                        <DialogTitle className="font-serif">{editingAddress ? 'Edit Address' : 'Add New Address'}</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddressSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Full Name</Label>
+                          <Input name="fullName" defaultValue={editingAddress?.fullName} required className="bg-background/50 border-white/10" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Phone</Label>
+                            <Input name="phone" defaultValue={editingAddress?.phone} required className="bg-background/50 border-white/10" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Pincode</Label>
+                            <Input name="postalCode" defaultValue={editingAddress?.postalCode} required className="bg-background/50 border-white/10" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Address Line 1</Label>
+                          <Input name="addressLine1" defaultValue={editingAddress?.addressLine1} required className="bg-background/50 border-white/10" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>City</Label>
+                            <Input name="city" defaultValue={editingAddress?.city} required className="bg-background/50 border-white/10" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>State</Label>
+                            <Input name="state" defaultValue={editingAddress?.state} required className="bg-background/50 border-white/10" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" name="isDefault" defaultChecked={editingAddress?.isDefault} id="isDefault" className="rounded border-white/10 bg-background/50" />
+                          <Label htmlFor="isDefault">Set as default</Label>
+                        </div>
+                        <Button type="submit" className="w-full bg-primary text-black">Save Address</Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                    <p className="text-muted-foreground">No saved addresses found.</p>
-                    <Button variant="outline" className="mt-4 border-white/10">Add New Address</Button>
-                  </div>
+                  {addresses.length === 0 ? (
+                    <div className="text-center py-12">
+                      <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                      <p className="text-muted-foreground">No saved addresses found.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {addresses.map((addr: any) => (
+                        <Card key={addr.id} className="bg-white/5 border-white/10">
+                          <CardContent className="p-4 flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold">{addr.fullName}</span>
+                                {addr.isDefault && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded uppercase">Default</span>}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{addr.addressLine1}</p>
+                              <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.postalCode}</p>
+                              <p className="text-sm text-muted-foreground mt-1">{addr.phone}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => { setEditingAddress(addr); setIsAddressModalOpen(true); }}>
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400" onClick={() => deleteAddress(addr.id)}>
+                                <Plus className="h-4 w-4 rotate-45" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

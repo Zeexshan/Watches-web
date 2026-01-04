@@ -1,0 +1,548 @@
+
+**Role & Context:**
+Act as a Senior Full-Stack Engineer fixing critical functionality gaps and responsive design issues in the "Circle Luxury" e-commerce application. We need to implement product editing, address management, and fix the 404 page responsive design.
+
+**CRITICAL CONSTRAINT:**
+The Google Sheets connection via `credentials.json` is working and must not be modified. Only update component logic and API endpoints.
+
+---
+
+## **ISSUE 1: Make 404 Page Watch Image Fully Responsive**
+
+**Current Problem:**
+The watch dial in the 404 page has hardcoded positioning and scaling that works on desktop but breaks on mobile devices. The current inline styles use fixed values that don't adapt to different screen sizes.
+
+*File: `client/src/pages/not-found.tsx`*
+
+### **Current Non-Responsive Styles:**
+The watch image currently has:
+- `scale: 1.5` (fixed scaling)
+- `position: absolute`
+- `top: 9vh` (fixed vertical position)
+- These don't adapt to mobile, tablet, or different screen sizes
+
+### **Required Responsive Implementation:**
+
+**Remove Inline Styles:**
+Remove the inline `style` attribute with fixed values. Replace with responsive Tailwind classes.
+
+**Responsive Watch Image Specifications:**
+
+*Desktop (1024px and above):*
+- Size: `w-32 h-32` (128px × 128px) or `w-40 h-40` (160px)
+- Scale: Use `scale-150` for 1.5x scaling
+- Position: Relative positioning within flex container
+- Drop shadow: Maintain the elegant glow effect
+
+*Tablet (768px to 1023px):*
+- Size: `md:w-28 md:h-28` (slightly smaller, 112px)
+- Scale: `md:scale-125` (1.25x)
+- Adjust vertical centering if needed
+
+*Mobile (Below 768px):*
+- Size: `w-20 h-20` or `w-24 h-24` (80-96px)
+- Scale: `scale-100` or `scale-110` (no or minimal scaling)
+- Ensure it fits between the "4"s without overflow
+
+**Layout Structure:**
+
+Use flexbox with responsive adjustments:
+
+*Container:*
+- Flex row layout: `flex flex-row items-center justify-center`
+- Add gap between elements: `gap-4 md:gap-6 lg:gap-8`
+- Center on page: Full viewport height with vertical centering
+
+*"4" Characters:*
+- Responsive font sizes: `text-6xl md:text-8xl lg:text-9xl`
+- Use luxury serif font
+- Maintain consistent color (white or gold)
+
+*Watch Image:*
+- Responsive dimensions: `w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32`
+- Responsive scaling: `scale-110 md:scale-125 lg:scale-150`
+- Image positioning: `object-contain` to maintain aspect ratio
+- Drop shadow (adjust for mobile): `drop-shadow-lg md:drop-shadow-[0_10px_40px_rgba(255,255,255,0.05)]`
+- Rotation animation: `animate-spin-slow` (ensure this works on all devices)
+
+**Vertical Positioning:**
+
+Instead of fixed `top: 9vh`, use flexbox centering:
+- Parent container: `min-h-screen flex flex-col justify-center items-center`
+- This naturally centers content vertically on all screen sizes
+
+**Mobile-Specific Adjustments:**
+
+*Consider Stack Layout for Very Small Screens (optional):*
+- If horizontal layout is too cramped on small phones
+- Use: `flex-row sm:flex-row` (keep row) or `flex-col sm:flex-row` (stack on mobile)
+- Adjust spacing accordingly
+
+**Tagline Responsiveness:**
+- Font size: `text-sm md:text-base lg:text-lg`
+- Padding: Adjust top padding `mt-4 md:mt-6 lg:mt-8`
+
+**Button Responsiveness:**
+- Width: Full width on mobile `w-full sm:w-auto`
+- Padding: Adjust for touch targets `px-6 py-3 md:px-8 md:py-4`
+
+**Testing Requirements:**
+- Test on 320px (iPhone SE)
+- Test on 375px (iPhone standard)
+- Test on 768px (iPad portrait)
+- Test on 1024px+ (Desktop)
+- Verify no horizontal scroll on any size
+- Ensure watch image stays centered between "4"s
+- Check that animation doesn't affect layout
+
+---
+
+## **ISSUE 2: Implement Product Update/Edit Functionality**
+
+**Current Problem:**
+Admin can only delete products. There's no way to edit existing products (change name, price, stock, images, variants, etc.). The Edit button exists but does nothing.
+
+### **Backend Implementation:**
+
+*File: `server/routes.ts`*
+
+**Create New Endpoint: `PUT /api/products/:id`**
+
+*Purpose:* Update an existing product in the Products sheet
+
+*Request Body:*
+```
+{
+  name?: string,
+  description?: string,
+  price?: number,
+  stock?: number,
+  category?: string,
+  image?: string,
+  variants?: array
+}
+```
+(All fields optional - only update provided fields)
+
+*Requirements:*
+- Extract product ID from URL parameter
+- Extract update data from request body
+- Validate data (price positive, stock non-negative, etc.)
+- Locate product row in Google Sheets Products tab by ID
+- Update only the provided fields (partial update support)
+- If variants array provided, serialize to JSON string before updating
+- Return updated product object
+
+*Response Format:*
+```
+Success: { success: true, product: updatedProductObject }
+Error: { success: false, error: "Error message" }
+```
+
+*Error Handling:*
+- Product ID not found (404)
+- Invalid data format
+- Validation errors (negative price, etc.)
+- Google Sheets API errors
+
+*File: `server/db.ts`*
+
+**Add Helper Function: `updateProduct(productId, updateData)`**
+
+*Requirements:*
+- Query Products sheet for product with matching ID
+- Build update object with only provided fields
+- Handle variants array serialization if present
+- Update the specific row in Google Sheets
+- Preserve fields that weren't updated
+- Return complete updated product object
+
+*Implementation Notes:*
+- Google Sheets update requires finding row index first
+- Update specific cells, not entire row (to preserve unchanged data)
+- Handle JSON serialization for variants column
+
+### **Frontend Implementation:**
+
+*File: `client/src/pages/AdminDashboard.tsx`*
+
+**Step 1 - Create Edit Product Modal/Form:**
+
+When Edit button (pencil icon) is clicked:
+
+*Modal/Dialog Opens with Pre-filled Form:*
+- Fetch product data by ID or use existing data from table
+- Pre-populate all form fields with current product values:
+  - Product Name (text input)
+  - Description (textarea)
+  - Price (number input)
+  - Stock (number input)
+  - Category (dropdown - same as Add Product)
+  - Main Image URL (text input, with upload button)
+  - Variants (variant builder with existing variants loaded)
+
+*Form State Management:*
+- Initialize form with current product data
+- Track changes as user edits fields
+- Support image upload for main image and variant images
+- Handle variants array (add/edit/remove variants)
+
+**Step 2 - Handle Variant Editing:**
+
+*For Existing Variants:*
+- Display each existing variant in the variant builder
+- Allow editing color name, stock, and image
+- Add "Remove" button to delete variant
+- Show current variant image preview
+
+*Add New Variants:*
+- "Add Variant" button to append new variant rows
+- Same interface as Add Product variant builder
+
+**Step 3 - Form Submission:**
+
+When "Save Changes" or "Update Product" button is clicked:
+
+- Validate all fields (same rules as Add Product)
+- Serialize variants array to JSON if modified
+- Call `PUT /api/products/${productId}` with updated data
+- Show loading state on save button
+- On success:
+  - Close modal
+  - Update product in table UI (optimistic update)
+  - Show success toast: "Product updated successfully"
+  - Refresh product list from API to ensure sync
+- On error:
+  - Display error message in modal
+  - Keep modal open for corrections
+  - Don't close or lose user's changes
+
+**Step 4 - Image Update Handling:**
+
+*If User Uploads New Image:*
+- Upload to Cloudinary via existing `POST /api/upload`
+- Replace image URL in form state
+- Show new image preview
+- Include new URL in PUT request
+
+*If User Doesn't Change Image:*
+- Keep existing image URL
+- Don't send image field in update (or send same URL)
+
+**Edit Button Click Handler:**
+
+Current: Logs to console
+Required:
+```
+const handleEditProduct = (product) => {
+  // Set product data in edit form state
+  // Open edit modal/dialog
+  // Pre-fill all form fields with product data
+}
+```
+
+**User Experience Requirements:**
+- Modal should be same size/style as Add Product modal
+- Clear "Cancel" button that discards changes
+- Confirm dialog if user tries to close with unsaved changes
+- Disable form submission while API call is pending
+- Show field-level validation errors
+
+---
+
+## **ISSUE 3: Implement Address Management (Add & Update)**
+
+**Current Problem:**
+Users can view saved addresses but cannot add new addresses or edit existing ones. The "Add New Address" button does nothing, and there's no way to update saved addresses.
+
+### **Backend Implementation:**
+
+*File: `server/routes.ts`*
+
+**Endpoint 1: `POST /api/user/addresses`**
+
+*Purpose:* Add a new address for the current user
+
+*Request Body:*
+```
+{
+  email: string, // User's email (from auth)
+  fullName: string,
+  phone: string,
+  addressLine1: string,
+  addressLine2?: string,
+  city: string,
+  state: string,
+  postalCode: string,
+  isDefault?: boolean
+}
+```
+
+*Requirements:*
+- Extract user email from auth context or request
+- Validate all required address fields
+- Query Users sheet for user row
+- Get existing addresses array (parse JSON if stored as string)
+- Add new address to array
+- If `isDefault: true`, set other addresses to false
+- Update user's addresses in Google Sheets (serialize array to JSON)
+- Return updated addresses array
+
+*Response Format:*
+```
+Success: { success: true, addresses: updatedAddressesArray }
+Error: { success: false, error: "Error message" }
+```
+
+**Endpoint 2: `PUT /api/user/addresses/:addressId`**
+
+*Purpose:* Update an existing address
+
+*Request Body:*
+```
+{
+  email: string,
+  addressId: string, // Unique ID for the address
+  ...updatedAddressFields
+}
+```
+
+*Requirements:*
+- Find user by email in Users sheet
+- Get user's addresses array
+- Find specific address by addressId
+- Update address fields with provided data
+- If `isDefault` changed to true, update other addresses
+- Save updated addresses array to Google Sheets
+- Return updated addresses array
+
+*Response Format:*
+```
+Success: { success: true, addresses: updatedAddressesArray }
+Error: { success: false, error: "Error message" }
+```
+
+**Endpoint 3 (Optional): `DELETE /api/user/addresses/:addressId`**
+
+*Purpose:* Delete an address
+
+Similar pattern: Find user → Remove address from array → Update sheet
+
+*File: `server/db.ts`*
+
+**Add Helper Functions:**
+
+**Function: `addUserAddress(email, addressData)`**
+- Find user in Users sheet by email
+- Parse existing addresses JSON
+- Generate unique ID for new address (UUID or timestamp)
+- Append new address to array
+- Handle default address logic
+- Serialize and save to sheet
+- Return updated addresses array
+
+**Function: `updateUserAddress(email, addressId, updateData)`**
+- Find user by email
+- Parse addresses array
+- Find and update specific address
+- Handle default address toggling
+- Serialize and save
+- Return updated array
+
+**Function: `deleteUserAddress(email, addressId)`**
+- Find user, parse addresses
+- Filter out specified address
+- If deleted address was default, set another as default
+- Serialize and save
+
+### **Frontend Implementation:**
+
+*File: `client/src/pages/Account.tsx`*
+
+**Step 1 - Add New Address Feature:**
+
+When "Add New Address" button is clicked:
+
+*Open Modal/Dialog with Address Form:*
+
+Form fields:
+- Full Name (text input, required)
+- Phone Number (text input, required, format validation)
+- Address Line 1 (text input, required)
+- Address Line 2 (text input, optional)
+- City (text input, required)
+- State (dropdown or text input, required)
+- Postal Code (text input, required, format validation)
+- Set as Default Address (checkbox)
+
+*Form Validation:*
+- Ensure all required fields are filled
+- Validate phone number format (10 digits)
+- Validate postal code format
+- Display inline validation errors
+
+*Form Submission:*
+- On "Save Address" button click
+- Validate all fields
+- Call `POST /api/user/addresses` with form data
+- Show loading state on button
+- On success:
+  - Close modal
+  - Add new address to addresses list in UI
+  - Show success toast: "Address added successfully"
+  - Clear form for next use
+- On error:
+  - Display error message
+  - Keep modal open for corrections
+
+**Step 2 - Edit Existing Address:**
+
+*Add Edit Button to Each Address Card:*
+- Small edit icon or "Edit" button on each address
+- On click, open same modal as Add Address
+- Pre-fill form with existing address data
+
+*Edit Form Submission:*
+- Call `PUT /api/user/addresses/${addressId}` with updated data
+- On success:
+  - Close modal
+  - Update address in UI list
+  - Show success toast: "Address updated"
+- On error:
+  - Show error message
+  - Keep modal open
+
+**Step 3 - Delete Address (Optional):**
+
+*Add Delete Button to Each Address:*
+- Trash icon or "Delete" button
+- On click, show confirmation dialog
+- If confirmed, call DELETE endpoint
+- Remove from UI on success
+
+**Step 4 - Set Default Address:**
+
+*Add "Set as Default" Action:*
+- Radio button or star icon on each address
+- On click, call update endpoint with `isDefault: true`
+- Update UI to show only one default address
+
+**Address Display Enhancements:**
+
+*Each Address Card Should Show:*
+- Full name in bold
+- Complete address (line1, line2, city, state, postal code)
+- Phone number
+- Default badge if applicable (star icon or "Default" label)
+- Edit and Delete action buttons
+
+*Empty State:*
+- If no addresses: "No saved addresses yet"
+- Large "Add New Address" button
+- Helpful text: "Add a shipping address for faster checkout"
+
+**State Management:**
+
+- Track addresses array in component state
+- Initialize from user data on mount
+- Update optimistically when adding/editing/deleting
+- Refetch from API after mutations to ensure sync
+
+---
+
+## **IMPLEMENTATION PRIORITY ORDER**
+
+**Phase 1 - Product Update Backend:**
+1. Add `updateProduct` function to `db.ts`
+2. Implement `PUT /api/products/:id` endpoint in `routes.ts`
+3. Test endpoint with API client (Postman)
+4. Verify partial updates work (only updating specific fields)
+5. Test variants array serialization during updates
+
+**Phase 2 - Product Update Frontend:**
+6. Create Edit Product modal/form component
+7. Wire Edit button to open modal with product data
+8. Implement form pre-population with current values
+9. Handle variant editing (load existing, add new, remove)
+10. Connect form submission to PUT endpoint
+11. Implement optimistic UI updates
+12. Test complete flow: Edit → Change values → Save → Verify in Google Sheets
+
+**Phase 3 - Address Management Backend:**
+13. Add address management functions to `db.ts`
+14. Implement `POST /api/user/addresses` endpoint
+15. Implement `PUT /api/user/addresses/:id` endpoint
+16. Optionally add DELETE endpoint
+17. Test all address endpoints with API client
+18. Verify JSON serialization of addresses array
+
+**Phase 4 - Address Management Frontend:**
+19. Create Add Address modal/form
+20. Wire "Add New Address" button to open modal
+21. Implement form validation
+22. Connect form to POST endpoint
+23. Add Edit button to address cards
+24. Implement Edit Address functionality
+25. Add Set Default and Delete features
+26. Test complete address CRUD flow
+
+**Phase 5 - 404 Page Responsiveness:**
+27. Remove inline styles from watch image
+28. Replace with responsive Tailwind classes
+29. Test on multiple device sizes (320px to desktop)
+30. Adjust spacing and scaling for each breakpoint
+31. Verify animation works smoothly on all devices
+32. Ensure no layout shift or horizontal scroll
+
+---
+
+## **TESTING CHECKLIST**
+
+**Product Update Functionality:**
+- [ ] Edit button opens modal with pre-filled data
+- [ ] All product fields are editable
+- [ ] Variant editing works (edit existing, add new, remove)
+- [ ] Image upload works for main and variant images
+- [ ] Save Changes updates Google Sheets correctly
+- [ ] UI updates immediately after save
+- [ ] Validation errors display properly
+- [ ] Cancel button discards changes
+- [ ] Loading states work during API calls
+- [ ] Error handling shows user-friendly messages
+
+**Address Management:**
+- [ ] Add New Address button opens modal
+- [ ] Address form has all required fields
+- [ ] Form validation works (required fields, formats)
+- [ ] New address saves to Google Sheets
+- [ ] New address appears in address list immediately
+- [ ] Edit button opens modal with pre-filled address
+- [ ] Address updates save correctly
+- [ ] Set as Default works (only one default at a time)
+- [ ] Delete address removes from list and database
+- [ ] Empty state displays when no addresses
+- [ ] Success/error messages display appropriately
+
+**404 Page Responsiveness:**
+- [ ] Watch image scales properly on desktop (1024px+)
+- [ ] Watch image scales down on tablet (768-1023px)
+- [ ] Watch image scales appropriately on mobile (below 768px)
+- [ ] "4-watch-4" layout stays centered on all screens
+- [ ] No horizontal scroll on any device size
+- [ ] Text remains readable on small screens
+- [ ] Button is touch-friendly on mobile
+- [ ] Animation doesn't cause performance issues
+- [ ] Layout doesn't break on very small screens (320px)
+
+**Overall Integration:**
+- [ ] Google Sheets connection remains stable
+- [ ] All CRUD operations work without errors
+- [ ] UI updates are smooth and responsive
+- [ ] No console errors in browser
+- [ ] Loading states provide clear feedback
+- [ ] Error messages are helpful and specific
+
+---
+
+**START BY:** Implementing the `PUT /api/products/:id` backend endpoint and testing it thoroughly with an API client before building the frontend Edit Product modal. This ensures the foundation is solid. Then move to address management backend before building the frontend forms.
+

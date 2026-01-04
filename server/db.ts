@@ -149,6 +149,26 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   return false;
 }
 
+export async function updateProduct(productId: number, updateData: any) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Products"];
+  const rows = await sheet.getRows();
+  const row = rows.find(r => parseInt(r.get("id")) === productId);
+  
+  if (!row) throw new Error("Product not found");
+
+  if (updateData.name) row.set("name", updateData.name);
+  if (updateData.price) row.set("price", updateData.price);
+  if (updateData.category) row.set("category", updateData.category);
+  if (updateData.description) row.set("description", updateData.description);
+  if (updateData.image) row.set("image_url", updateData.image);
+  if (updateData.stock !== undefined) row.set("stock", updateData.stock);
+  if (updateData.variants) row.set("variants", JSON.stringify(updateData.variants));
+
+  await row.save();
+  return { id: productId, ...updateData };
+}
+
 // ... keep existing imports and functions ...
 
 // --- NEW: Real Login Function ---
@@ -187,4 +207,78 @@ export async function addOrder(order: any) {
     product_amount_due: order.total,
     date: new Date().toISOString(),
   });
+}
+export async function getUserAddresses(email: string) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Users"];
+  const rows = await sheet.getRows();
+  const user = rows.find(r => r.get("email") === email);
+  if (!user) return [];
+  try {
+    return JSON.parse(user.get("saved_address") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function addUserAddress(email: string, addressData: any) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Users"];
+  const rows = await sheet.getRows();
+  const user = rows.find(r => r.get("email") === email);
+  if (!user) throw new Error("User not found");
+
+  const addresses = await getUserAddresses(email);
+  const newAddress = { ...addressData, id: `ADDR-${Date.now()}` };
+  
+  if (addressData.isDefault) {
+    addresses.forEach((a: any) => a.isDefault = false);
+  } else if (addresses.length === 0) {
+    newAddress.isDefault = true;
+  }
+
+  addresses.push(newAddress);
+  user.set("saved_address", JSON.stringify(addresses));
+  await user.save();
+  return addresses;
+}
+
+export async function updateUserAddress(email: string, addressId: string, updateData: any) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Users"];
+  const rows = await sheet.getRows();
+  const user = rows.find(r => r.get("email") === email);
+  if (!user) throw new Error("User not found");
+
+  const addresses = await getUserAddresses(email);
+  const index = addresses.findIndex((a: any) => a.id === addressId);
+  if (index === -1) throw new Error("Address not found");
+
+  if (updateData.isDefault) {
+    addresses.forEach((a: any) => a.isDefault = false);
+  }
+
+  addresses[index] = { ...addresses[index], ...updateData };
+  user.set("saved_address", JSON.stringify(addresses));
+  await user.save();
+  return addresses;
+}
+
+export async function deleteUserAddress(email: string, addressId: string) {
+  await initSheets();
+  const sheet = doc.sheetsByTitle["Users"];
+  const rows = await sheet.getRows();
+  const user = rows.find(r => r.get("email") === email);
+  if (!user) throw new Error("User not found");
+
+  let addresses = await getUserAddresses(email);
+  addresses = addresses.filter((a: any) => a.id !== addressId);
+  
+  if (addresses.length > 0 && !addresses.find((a: any) => a.isDefault)) {
+    addresses[0].isDefault = true;
+  }
+
+  user.set("saved_address", JSON.stringify(addresses));
+  await user.save();
+  return addresses;
 }

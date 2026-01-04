@@ -1,46 +1,46 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import Layout from "@/components/layout/Layout";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 text-center">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="flex items-center justify-center gap-4 mb-8"
-      >
-        <span className="text-[6rem] md:text-[8rem] font-serif font-bold text-white leading-none">4</span>
-        <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
-          <motion.img 
-            src="/attached_assets/watch1.png" 
-            alt="Watch Dial"
-            className="w-full h-full object-contain rounded-full border-2 border-primary/20 p-1"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          />
+    <Layout>
+      <div className="min-h-[70vh] bg-black flex flex-col items-center justify-center px-4 text-center py-20">
+        <div className="flex items-center justify-center gap-6 md:gap-12 mb-16">
+          <span className="text-[7rem] md:text-[14rem] font-serif font-light text-white leading-none tracking-tighter opacity-90">4</span>
+          <div className="relative w-44 h-64 md:w-64 md:h-96 flex items-center justify-center -translate-y-4">
+            <img 
+              src="/attached_assets/watch1.png" 
+              alt="Luxury Watch"
+              className="w-full h-full object-contain filter drop-shadow-[0_10px_40px_rgba(255,255,255,0.05)]"
+            />
+          </div>
+          <span className="text-[7rem] md:text-[14rem] font-serif font-light text-white leading-none tracking-tighter opacity-90">4</span>
         </div>
-        <span className="text-[6rem] md:text-[8rem] font-serif font-bold text-white leading-none">4</span>
-      </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.8 }}
-      >
-        <h2 className="text-xl md:text-2xl font-serif italic text-primary mb-4 tracking-widest">
-          Lost in time! This page is not ticking
-        </h2>
-        <p className="text-muted-foreground mb-8 max-w-md mx-auto text-sm md:text-base">
-          The moment you're looking for has passed. Let's return to our collection.
-        </p>
-        <Link href="/">
-          <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-black font-serif uppercase tracking-widest px-8 py-6 h-auto">
-            Return to Time
-          </Button>
-        </Link>
-      </motion.div>
-    </div>
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="space-y-10"
+        >
+          <h2 className="text-xl md:text-3xl font-serif text-white/80 tracking-[0.25em] uppercase font-light italic">
+            Lost in time! This page is not ticking.
+          </h2>
+          
+          <div className="pt-6">
+            <Link href="/">
+              <Button 
+                variant="outline" 
+                className="border-white/30 text-white hover:bg-white hover:text-black font-serif uppercase tracking-[0.4em] px-12 py-8 h-auto text-xs transition-all duration-700 bg-transparent rounded-none border-[0.5px]"
+              >
+                Back to Homepage
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </Layout>
   );
 }
